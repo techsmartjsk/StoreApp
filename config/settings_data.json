@@ -1,0 +1,13 @@
+{
+  "current": {
+    "color_primary": "#1a1a1a",
+    "color_secondary": "#c9a96e",
+    "color_background": "#faf7f2",
+    "color_text": "#1a1a1a",
+    "heading_font_scale": 100,
+    "body_font_scale": 100,
+    "cart_type": "page",
+    "show_cart_note": true,
+    "currency_code_enabled": false
+  }
+}

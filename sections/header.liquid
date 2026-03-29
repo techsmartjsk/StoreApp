@@ -52,13 +52,13 @@
 
     <!-- Header Icons -->
     <div class="header__icons">
-      <a href="/account" class="header__icon-btn" id="header-account" aria-label="Account">
+      <a href="/account" class="header__icon-btn hide-mobile" id="header-account" aria-label="Account">
         {% render 'icon', name: 'user' %}
       </a>
-      <a href="/collections" class="header__icon-btn" id="header-collections" aria-label="Collections">
+      <a href="/collections" class="header__icon-btn hide-mobile" id="header-collections" aria-label="Collections">
         {% render 'icon', name: 'gem' %}
       </a>
-      <a href="/pages/wishlist" class="header__icon-btn" id="header-wishlist" aria-label="Wishlist">
+      <a href="/pages/wishlist" class="header__icon-btn hide-mobile" id="header-wishlist" aria-label="Wishlist">
         {% render 'icon', name: 'heart' %}
       </a>
       <a href="/cart" class="header__icon-btn" id="header-cart" aria-label="Cart">
@@ -69,9 +69,8 @@
       </a>
     </div>
   </div>
-</header>
 
-<!-- Navigation Bar -->
+  <!-- Navigation Bar -->
 <nav class="nav-bar" id="nav-bar" aria-label="Main navigation">
   <div class="nav-bar__wrapper page-width">
     {%- for block in section.blocks -%}
@@ -86,23 +85,22 @@
         </a>
       {%- endif -%}
     {%- endfor -%}
-  </div>
-</nav>
 
-<script>
-  // Mobile menu toggle
-  document.addEventListener('DOMContentLoaded', function() {
-    const toggle = document.getElementById('mobile-menu-toggle');
-    const nav = document.getElementById('nav-bar');
-    if (toggle && nav) {
-      toggle.addEventListener('click', function() {
-        nav.classList.toggle('is-open');
-        const isOpen = nav.classList.contains('is-open');
-        toggle.setAttribute('aria-expanded', isOpen);
-      });
-    }
-  });
-</script>
+    <!-- Mobile secondary navigation (account, wishlist etc) -->
+    <div class="mobile-utils">
+      <a href="/account" class="nav-bar__link">
+        {% render 'icon', name: 'user' %} Account
+      </a>
+      <a href="/collections" class="nav-bar__link">
+        {% render 'icon', name: 'gem' %} Collections
+      </a>
+      <a href="/pages/wishlist" class="nav-bar__link">
+        {% render 'icon', name: 'heart' %} Wishlist
+      </a>
+    </div>
+  </nav>
+</header>
+
 
 {% schema %}
 {

@@ -49,7 +49,7 @@
       }
 
       // Hide nav bar on scroll down, show on scroll up
-      if (navBar && currentScrollY > 200) {
+      if (navBar && currentScrollY > 200 && !navBar.classList.contains('is-open')) {
         if (currentScrollY > lastScrollY) {
           navBar.style.transform = 'translateY(-100%)';
           navBar.style.transition = 'transform 0.3s ease';
@@ -190,6 +190,28 @@
   }
 
   // =============================================
+  // Mobile Menu Toggle
+  // =============================================
+  function initMobileMenu() {
+    const menuToggle = document.querySelector('.header__menu-toggle');
+    const navBar = document.getElementById('nav-bar');
+    
+    if (menuToggle && navBar) {
+      menuToggle.addEventListener('click', function() {
+        navBar.classList.toggle('is-open');
+        
+        // Change icon based on open state
+        const iconSvg = this.querySelector('svg');
+        if (navBar.classList.contains('is-open')) {
+          iconSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>';
+        } else {
+          iconSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"></path>';
+        }
+      });
+    }
+  }
+
+  // =============================================
   // Init All
   // =============================================
   function init() {
@@ -201,6 +223,7 @@
     initNavActiveState();
     initAddToCart();
     initAnnouncementBar();
+    initMobileMenu();
   }
 
   // Run on DOM ready

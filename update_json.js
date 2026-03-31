@@ -18,7 +18,7 @@ if (data.sections.navratnas && data.sections.navratnas.blocks) {
         'Blue Sapphire': 'nav-blue-sapphire.png',
         'Yellow Sapphire': 'nav-yellow-sapphire.png',
         'Hessonite': 'nav-hessonite.png',
-        'Garnet': 'up-garnet.png' // Or white sapphire if that's the 9th
+        'White Sapphire': 'nav-white-sapphire.png'
     };
     for (const key in data.sections.navratnas.blocks) {
         const block = data.sections.navratnas.blocks[key];

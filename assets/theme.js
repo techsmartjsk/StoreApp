@@ -365,20 +365,21 @@
     items.forEach(function(item) {
       var imgHtml = item.image
         ? '<img src="' + item.image + '" alt="' + item.title + '" loading="lazy">'
-        : '<div class="wishlist-card__img-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
+        : '<div class="product-card__placeholder"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
 
-      html += '<div class="wishlist-card" data-wishlist-card="' + item.id + '">'
-        + '<button class="wishlist-card__remove" onclick="WishlistApp.remove(\'' + item.id + '\')" aria-label="Remove">'
-        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+      html += '<div class="product-card wishlist-card" data-wishlist-card="' + item.id + '">'
+        + '<a href="' + item.url + '" class="product-card__link" aria-label="' + item.title + '">'
+        + '<div class="product-card__image">'
+        + imgHtml
+        + '</div>'
+        + '<div class="product-card__info">'
+        + '<h3 class="product-card__title">' + item.title + '</h3>'
+        + '<div class="product-card__price">' + item.price + '</div>'
+        + '</div>'
+        + '</a>'
+        + '<button class="product-card__wishlist icon-btn is-wishlisted" onclick="WishlistApp.remove(\'' + item.id + '\')" aria-label="Remove from wishlist">'
+        + '<svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
         + '</button>'
-        + '<a href="' + item.url + '" class="wishlist-card__img">' + imgHtml + '</a>'
-        + '<div class="wishlist-card__info">'
-        + '<h4 class="wishlist-card__name"><a href="' + item.url + '">' + item.title + '</a></h4>'
-        + '<p class="wishlist-card__price">' + item.price + '</p>'
-        + '</div>'
-        + '<div class="wishlist-card__actions">'
-        + '<a href="' + item.url + '" class="wishlist-card__view-btn">VIEW DETAILS</a>'
-        + '</div>'
         + '</div>';
     });
 

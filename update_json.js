@@ -4,7 +4,7 @@ const data = JSON.parse(fs.readFileSync(file, 'utf8'));
 
 // Hero
 if (data.sections.hero) {
-    data.sections.hero.settings.asset_name = 'banner-navratna.png';
+    data.sections.hero.settings.asset_name = 'banner-navratna.jpg';
 }
 
 // Navratnas

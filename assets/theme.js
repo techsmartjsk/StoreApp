@@ -240,3 +240,172 @@
   };
 
 })();
+
+// =============================================
+// Wishlist (localStorage-based)
+// =============================================
+(function() {
+  'use strict';
+
+  var STORAGE_KEY = 'precious_carats_wishlist';
+
+  function getItems() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch(e) {
+      return [];
+    }
+  }
+
+  function saveItems(items) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    updateHeaderCount();
+    syncButtons();
+  }
+
+  function findIndex(id) {
+    var items = getItems();
+    for (var i = 0; i < items.length; i++) {
+      if (String(items[i].id) === String(id)) return i;
+    }
+    return -1;
+  }
+
+  function toggle(btn) {
+    var id = btn.getAttribute('data-product-id');
+    var items = getItems();
+    var idx = findIndex(id);
+
+    if (idx > -1) {
+      items.splice(idx, 1);
+    } else {
+      items.push({
+        id: id,
+        title: btn.getAttribute('data-product-title'),
+        url: btn.getAttribute('data-product-url'),
+        price: btn.getAttribute('data-product-price'),
+        image: btn.getAttribute('data-product-image'),
+        variantId: btn.getAttribute('data-variant-id'),
+        addedAt: Date.now()
+      });
+    }
+
+    saveItems(items);
+  }
+
+  function remove(id) {
+    var items = getItems();
+    var idx = findIndex(id);
+    if (idx > -1) {
+      items.splice(idx, 1);
+      saveItems(items);
+    }
+    renderPage();
+  }
+
+  function clearAll() {
+    if (confirm('Remove all items from your wishlist?')) {
+      saveItems([]);
+      renderPage();
+    }
+  }
+
+  function updateHeaderCount() {
+    var count = getItems().length;
+    var badge = document.getElementById('header-wishlist-count');
+    if (badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'flex' : 'none';
+    }
+  }
+
+  function syncButtons() {
+    var items = getItems();
+    var ids = items.map(function(item) { return String(item.id); });
+    var buttons = document.querySelectorAll('[data-wishlist-toggle]');
+
+    buttons.forEach(function(btn) {
+      var id = btn.getAttribute('data-product-id');
+      if (ids.indexOf(id) > -1) {
+        btn.classList.add('is-wishlisted');
+        btn.setAttribute('aria-label', 'Remove from wishlist');
+      } else {
+        btn.classList.remove('is-wishlisted');
+        btn.setAttribute('aria-label', 'Add to wishlist');
+      }
+    });
+  }
+
+  function renderPage() {
+    var grid = document.getElementById('wishlist-grid');
+    var empty = document.getElementById('wishlist-empty');
+    var actions = document.getElementById('wishlist-actions');
+    var countText = document.getElementById('wishlist-count-text');
+
+    if (!grid) return; // not on wishlist page
+
+    var items = getItems();
+
+    if (countText) {
+      countText.textContent = items.length + (items.length === 1 ? ' item' : ' items');
+    }
+
+    if (items.length === 0) {
+      grid.style.display = 'none';
+      empty.style.display = 'block';
+      if (actions) actions.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    if (actions) actions.style.display = 'flex';
+
+    var html = '';
+    items.forEach(function(item) {
+      var imgHtml = item.image
+        ? '<img src="' + item.image + '" alt="' + item.title + '" loading="lazy">'
+        : '<div class="wishlist-card__img-placeholder"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
+
+      html += '<div class="wishlist-card" data-wishlist-card="' + item.id + '">'
+        + '<button class="wishlist-card__remove" onclick="WishlistApp.remove(\'' + item.id + '\')" aria-label="Remove">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        + '</button>'
+        + '<a href="' + item.url + '" class="wishlist-card__img">' + imgHtml + '</a>'
+        + '<div class="wishlist-card__info">'
+        + '<h4 class="wishlist-card__name"><a href="' + item.url + '">' + item.title + '</a></h4>'
+        + '<p class="wishlist-card__price">' + item.price + '</p>'
+        + '</div>'
+        + '<div class="wishlist-card__actions">'
+        + '<a href="' + item.url + '" class="wishlist-card__view-btn">VIEW DETAILS</a>'
+        + '</div>'
+        + '</div>';
+    });
+
+    grid.innerHTML = html;
+  }
+
+  // Init on DOM ready
+  function initWishlist() {
+    updateHeaderCount();
+    syncButtons();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWishlist);
+  } else {
+    initWishlist();
+  }
+
+  // Expose globally
+  window.WishlistApp = {
+    toggle: toggle,
+    remove: remove,
+    clearAll: clearAll,
+    getItems: getItems,
+    renderPage: renderPage,
+    syncButtons: syncButtons,
+    updateHeaderCount: updateHeaderCount
+  };
+
+})();

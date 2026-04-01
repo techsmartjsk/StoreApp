@@ -396,9 +396,8 @@
           "type": "planet",
           "settings": {
             "title": "SURYA",
-            "subtitle": "Yellow Sapphire, Blue Sapphire and Hessonite",
-            "description": "Growth, Health, Finance",
-            "svg_code": "<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='8' stroke='currentColor' stroke-width='2' fill='none'/><circle cx='12' cy='12' r='2' fill='currentColor'/></svg>",
+            "subtitle": "Ruby, Spinel, Garnet",
+            "description": "Authority, Recognition, Vitality, Self esteem",
             "url": "/collections/surya"
           }
         },
@@ -406,50 +405,72 @@
           "type": "planet",
           "settings": {
             "title": "CHANDRA",
-            "subtitle": "Yellow Sapphire, Blue Sapphire and Hessonite",
-            "description": "Growth, Health, Finance",
-            "svg_code": "<svg viewBox='0 0 24 24'><path d='M12 3a9 9 0 0 0 0 18A9 9 0 0 1 12 3z' stroke='currentColor' stroke-width='2' fill='none'/></svg>",
+            "subtitle": "Pearl, Moon stone",
+            "description": "Mind, Emotions, Feelings, Mother, Peace, Intuition, Comfort",
             "url": "/collections/chandra"
           }
         },
         "pl_3": {
           "type": "planet",
           "settings": {
-            "title": "SHUKRA",
-            "subtitle": "Yellow Sapphire, Blue Sapphire and Hessonite",
-            "description": "Growth, Health, Finance",
-            "svg_code": "<svg viewBox='0 0 24 24'><circle cx='12' cy='9' r='6' stroke='currentColor' stroke-width='2' fill='none'/><path d='M12 15v6m-3-3h6' stroke='currentColor' stroke-width='2'/></svg>",
-            "url": "/collections/shukra"
+            "title": "MANGAL",
+            "subtitle": "Red coral, white coral",
+            "description": "Courage, Energy, Action, Strength, Protection, Passion, Discipline, Drive",
+            "url": "/collections/mangal"
           }
         },
         "pl_4": {
           "type": "planet",
           "settings": {
-            "title": "GURU",
-            "subtitle": "Yellow Sapphire, Blue Sapphire and Hessonite",
-            "description": "For Growth, Health, Finance",
-            "svg_code": "<svg viewBox='0 0 24 24'><path d='M8 6h8v12H8m4-12v12m-2-6h4' stroke='currentColor' stroke-width='2' fill='none'/></svg>",
-            "url": "/collections/guru"
+            "title": "BUDH",
+            "subtitle": "Emerald, Peridot, Green Onyx",
+            "description": "Intelligence, Communication, Business, Learning, Clarity, Calm mind, Social charm",
+            "url": "/collections/budh"
           }
         },
         "pl_5": {
           "type": "planet",
           "settings": {
-            "title": "KETU",
-            "subtitle": "Yellow Sapphire, Blue Sapphire and Hessonite",
-            "description": "For Growth, Health, Finance",
-            "svg_code": "<svg viewBox='0 0 24 24'><path d='M8 18h8v-12H8m4 12v-12' stroke='currentColor' stroke-width='2' fill='none'/></svg>",
-            "url": "/collections/ketu"
+            "title": "GURU",
+            "subtitle": "Yellow Sapphire, Citrine",
+            "description": "Wisdom, Growth, Fortune, Marriage, Morality, Stability, Divine Blessings 'guru kripa'",
+            "url": "/collections/guru"
           }
         },
         "pl_6": {
           "type": "planet",
           "settings": {
+            "title": "SHUKRA",
+            "subtitle": "White sapphire, Opal, Turquoise",
+            "description": "Love, Beauty, Luxury, Harmony, Pleasure, Creativity, Charm",
+            "url": "/collections/shukra"
+          }
+        },
+        "pl_7": {
+          "type": "planet",
+          "settings": {
             "title": "SHANI",
-            "subtitle": "Yellow Sapphire, Blue Sapphire and Hessonite",
-            "description": "For Growth, Health, Finance",
-            "svg_code": "<svg viewBox='0 0 24 24'><path d='M12 4v16m-4-12h8m-4 8h4' stroke='currentColor' stroke-width='2' fill='none'/></svg>",
+            "subtitle": "Blue sapphire, iolite, amethyst",
+            "description": "Justice, Discipline, Stability, Karma, Patience, Integrity, Endurance, Structure",
             "url": "/collections/shani"
+          }
+        },
+        "pl_8": {
+          "type": "planet",
+          "settings": {
+            "title": "RAHU",
+            "subtitle": "Hessonite Garnet (Gomedhak)",
+            "description": "Ambition, Obsession, Innovation, Illusion, Sudden rise, Foreign links, Shadows",
+            "url": "/collections/rahu"
+          }
+        },
+        "pl_9": {
+          "type": "planet",
+          "settings": {
+            "title": "KETU",
+            "subtitle": "Cat's eye chrysoberyl, Cat's eye quartz/apatite",
+            "description": "Detachment, Spirituality, Intuition, Moksha, Mysticism, Closure, Insight",
+            "url": "/collections/ketu"
           }
         }
       },
@@ -459,7 +480,10 @@
         "pl_3",
         "pl_4",
         "pl_5",
-        "pl_6"
+        "pl_6",
+        "pl_7",
+        "pl_8",
+        "pl_9"
       ]
     },
     "everybody": {

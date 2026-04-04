@@ -128,7 +128,16 @@
                 {% render 'icon', name: 'chevron-down', class: 'nav-bar__chevron' %}
               </a>
 
-              <div class="mega-menu" role="region" aria-label="{{ nav_label }} submenu">
+              {%- assign item_count = 0 -%}
+              {%- for item_block in section.blocks -%}
+                {%- if item_block.type == 'dropdown_item' -%}
+                  {%- if item_block.settings.parent_label == nav_label -%}
+                    {%- assign item_count = item_count | plus: 1 -%}
+                  {%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+
+              <div class="mega-menu {% if item_count > 5 %}mega-menu--multi{% endif %}" role="region" aria-label="{{ nav_label }} submenu">
                 {% if block.settings.dropdown_heading != blank %}
                   <h4 class="mega-menu__heading">{{ block.settings.dropdown_heading }}</h4>
                 {% endif %}
@@ -175,6 +184,16 @@
                         {%- endif -%}
                       {%- endif -%}
                     {%- endfor -%}
+                    {%- unless nav_label == 'CURATED COLLECTIONS' -%}
+                      <li class="mega-menu__item-wrapper">
+                        <a href="{{ nav_url }}" class="mega-menu__item mega-menu__item--view-all">
+                          <div class="mega-menu__icon" style="background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                            →
+                          </div>
+                          <span class="mega-menu__label" style="font-weight: 700; color: var(--color-gold);">VIEW ALL {{ nav_label }}</span>
+                        </a>
+                      </li>
+                    {%- endunless -%}
                   {%- endif -%}
                 </ul>
               </div>

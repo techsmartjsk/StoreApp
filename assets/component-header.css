@@ -320,6 +320,40 @@
   color: var(--color-gold-dark);
 }
 
+/* Multi-column variant for split lists (e.g. Gemstones) */
+@media (min-width: 993px) {
+  .mega-menu--multi {
+    width: 900px !important;
+    left: 0 !important;
+    transform: translateY(-10px) !important;
+  }
+
+  .nav-item--has-dropdown:hover .mega-menu--multi {
+    transform: translateY(0) !important;
+  }
+
+  .mega-menu--multi .mega-menu__list {
+    display: grid !important;
+    grid-template-rows: repeat(5, auto);
+    grid-auto-flow: column;
+    gap: 0;
+  }
+
+  .mega-menu--multi .mega-menu__item-wrapper {
+    border-right: 1px solid rgba(0,0,0,0.03);
+    border-bottom: 1px solid rgba(0,0,0,0.03);
+  }
+
+  .mega-menu--multi .mega-menu__item-wrapper:nth-child(5n) {
+    border-bottom: 1px solid rgba(0,0,0,0.03); /* Keep for middle items */
+  }
+
+  .mega-menu--multi .mega-menu__item-wrapper:last-child {
+    border-bottom: none;
+  }
+}
+
+
 /* Sub-list for product preview (Sanctum) */
 .mega-menu__sub-list {
   list-style: none;

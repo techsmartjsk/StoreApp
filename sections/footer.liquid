@@ -138,10 +138,60 @@
       <img src="{{ 'bvc_logistics.jpeg' | asset_url }}" alt="BVC Logistics">
     </div>
 
-    <div class="footer__bottom">
-      <p class="footer__copyright">
-        &copy; {{ 'now' | date: '%Y' }} Precious Carats. All Rights Reserved.
-      </p>
+    <div class="footer__bottom-bar">
+      <div class="footer__bottom-left">
+        <h5 class="footer__social-heading">Lets get social</h5>
+        <div class="footer__social-icons">
+          <a href="{{ section.settings.social_facebook | default: settings.social_facebook_link | default: '#' }}" class="footer__social-link" aria-label="Facebook">
+            {% render 'icon', name: 'facebook' %}
+          </a>
+          <a href="{{ section.settings.social_instagram | default: settings.social_instagram_link | default: '#' }}" class="footer__social-link" aria-label="Instagram">
+            {% render 'icon', name: 'instagram' %}
+          </a>
+          <a href="{{ section.settings.social_youtube | default: '#' }}" class="footer__social-link" aria-label="YouTube">
+            {% render 'icon', name: 'youtube' %}
+          </a>
+          <a href="{{ section.settings.social_twitter | default: '#' }}" class="footer__social-link" aria-label="X (Twitter)">
+            {% render 'icon', name: 'x' %}
+          </a>
+        </div>
+        <div class="footer__policy-links">
+          {%- if section.settings.policy_refund_url != blank -%}<a href="{{ section.settings.policy_refund_url }}">Refund policy</a>{%- endif -%}
+          {%- if section.settings.policy_privacy_url != blank -%}<a href="{{ section.settings.policy_privacy_url }}">Privacy policy</a>{%- endif -%}
+          {%- if section.settings.policy_terms_url != blank -%}<a href="{{ section.settings.policy_terms_url }}">Terms of service</a>{%- endif -%}
+        </div>
+      </div>
+      <div class="footer__bottom-right">
+        <p class="footer__copyright">
+          &copy; {{ 'now' | date: '%Y' }} {{ section.settings.copyright_company | default: "Helios Lifestyle Limited" }}. {{ section.settings.copyright_text | default: "All rights reserved." }}
+        </p>
+        {%- if section.settings.contact_address_full != blank -%}
+          <p class="footer__full-address">
+            Contact Us: {{ section.settings.contact_address_full }}
+          </p>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+  <div class="footer__most-searched">
+    <div class="page-width">
+      <h5 class="footer__most-searched-title">MOST SEARCHED</h5>
+      <div class="footer__most-searched-links">
+        {%- for p in collections.all.products limit: 10 -%}
+          <a href="{{ p.url }}">{{ p.title }}</a>
+        {%- endfor -%}
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'most_searched' -%}
+            {%- assign keywords = block.settings.keywords | split: ',' -%}
+            {%- for keyword in keywords -%}
+              {%- assign k = keyword | strip -%}
+              {%- if k != blank -%}
+                <a href="/search?q={{ k | url_encode }}">{{ k }}</a>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
     </div>
   </div>
 </footer>
@@ -152,16 +202,136 @@
     color: #3a3a3a;
   }
 
-  .site-footer .footer__bottom {
-    border-top: 1px solid #ddd;
+  .footer__most-searched {
+    background: #1a1a1a;
     padding: var(--space-lg) 0;
-    text-align: center;
+    color: #999;
+    margin: 0;
+  }
+
+  .footer__most-searched-title {
+    font-family: var(--font-accent);
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .footer__most-searched-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    line-height: 1.6;
+  }
+
+  .footer__most-searched-links a {
+    color: #999;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-size: 10px;
+    transition: color 0.2s;
+  }
+
+  .footer__most-searched-links a:hover {
+    color: #fff;
+  }
+
+  .site-footer .footer__bottom-bar {
+    border-top: 1px solid #dcc6b0;
+    padding: var(--space-xl) 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+  }
+
+  .footer__social-heading {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a2a3a;
+    margin: 0 0 12px;
+  }
+
+  .footer__social-icons {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .footer__social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #1a2a3a;
+    transition: all 0.2s ease;
+  }
+
+  .footer__social-link svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .footer__social-link:hover {
+    background: var(--color-gold);
+    border-color: var(--color-gold);
+    color: #fff;
+    transform: translateY(-2px);
+  }
+
+  .footer__policy-links {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: #666;
+  }
+
+  .footer__policy-links a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer__policy-links a:hover {
+    color: #1a2a3a;
+    text-decoration: underline;
+  }
+
+  .footer__bottom-right {
+    text-align: right;
+    max-width: 500px;
   }
 
   .site-footer .footer__copyright {
     font-size: 11px;
+    color: #555;
+    margin: 0 0 6px;
+    font-weight: 500;
+  }
+
+  .footer__full-address {
+    font-size: 10px;
     color: #888;
+    line-height: 1.5;
     margin: 0;
+  }
+
+  @media screen and (max-width: 768px) {
+    .site-footer .footer__bottom-bar {
+      flex-direction: column;
+      text-align: left;
+      gap: 24px;
+    }
+    .footer__bottom-right {
+      text-align: left;
+    }
   }
 
   .footer__grid {
@@ -418,6 +588,57 @@
       "label": "Facebook URL"
     },
     {
+      "type": "url",
+      "id": "social_youtube",
+      "label": "YouTube URL"
+    },
+    {
+      "type": "url",
+      "id": "social_twitter",
+      "label": "X (Twitter) URL"
+    },
+    {
+      "type": "header",
+      "content": "Policy Links"
+    },
+    {
+      "type": "url",
+      "id": "policy_refund_url",
+      "label": "Refund Policy URL"
+    },
+    {
+      "type": "url",
+      "id": "policy_privacy_url",
+      "label": "Privacy Policy URL"
+    },
+    {
+      "type": "url",
+      "id": "policy_terms_url",
+      "label": "Terms of Service URL"
+    },
+    {
+      "type": "header",
+      "content": "Footer Bottom Meta"
+    },
+    {
+      "type": "text",
+      "id": "copyright_company",
+      "label": "Copyright Company Name",
+      "default": "Helios Lifestyle Limited"
+    },
+    {
+      "type": "text",
+      "id": "copyright_text",
+      "label": "Copyright Suffix",
+      "default": "All rights reserved."
+    },
+    {
+      "type": "textarea",
+      "id": "contact_address_full",
+      "label": "Full Contact Address",
+      "default": "9th Floor, Splendor Spectrum One, Golf Course Ext Road, Sector 58, Gurugram, Haryana. 122001"
+    },
+    {
       "type": "header",
       "content": "About Us Links"
     },
@@ -502,6 +723,19 @@
           "type": "url",
           "id": "link_5_url",
           "label": "Link 5 URL"
+        }
+      ]
+    },
+    {
+      "type": "most_searched",
+      "name": "Most Searched Links",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "textarea",
+          "id": "keywords",
+          "label": "Keywords (Comma separated)",
+          "default": "Blue Sapphire, Yellow Sapphire, Natural Emerald, Red Ruby, Pearl Gemstone, Red Coral, Hessonite Stone, Cat's Eye Gem, Navratna Collection, Astrological Gemstones, Certified Panna, Original Neelam, Manik Stone Benefits, Gemstone Rings, Luxury Pendants, Custom Gemstone Jewellery"
         }
       ]
     }

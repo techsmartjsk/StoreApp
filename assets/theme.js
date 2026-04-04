@@ -439,13 +439,31 @@
     return -1;
   }
 
+  function toast(msg) {
+    var el = document.getElementById('wishlist-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'wishlist-toast';
+      el.className = 'wishlist-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('is-visible');
+    clearTimeout(window._wishlistToastTimer);
+    window._wishlistToastTimer = setTimeout(function() {
+      el.classList.remove('is-visible');
+    }, 2000);
+  }
+
   function toggle(btn) {
+    console.log('Wishlist toggle clicked', btn.getAttribute('data-product-id'));
     var id = btn.getAttribute('data-product-id');
     var items = getItems();
     var idx = findIndex(id);
 
     if (idx > -1) {
       items.splice(idx, 1);
+      toast('Removed from wishlist');
     } else {
       items.push({
         id: id,
@@ -456,6 +474,7 @@
         variantId: btn.getAttribute('data-variant-id'),
         addedAt: Date.now()
       });
+      toast('Added to wishlist');
     }
 
     saveItems(items);

@@ -469,6 +469,10 @@
   /* Page wrapper */
   .product-page { padding: var(--space-2xl, 40px) 0 var(--space-4xl, 80px); }
 
+  @media (max-width: 768px) {
+    .product-page { padding: var(--space-xl, 24px) 16px var(--space-3xl, 60px); }
+  }
+
   .product-page__wrapper {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -523,11 +527,20 @@
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    .product-page__main-img-wrap {
+      max-height: 65vh;
+    }
   }
 
   .product-page__main-img {
     width: 100%;
-    height: auto;
+    max-height: 100%;
     display: block;
     object-fit: contain;
   }
@@ -557,6 +570,10 @@
     max-height: 52px;
     width: auto;
     object-fit: contain;
+  }
+
+  @media (max-width: 768px) {
+    .product-page__cert-logo { max-height: 36px; }
   }
 
   /* Image action icons */
@@ -978,6 +995,18 @@
     gap: 16px;
   }
 
+  @media (max-width: 1024px) {
+    .product-recs__grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .product-recs__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  }
+
+  @media (max-width: 480px) {
+    .product-recs__grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+
   .product-recs__card {
     min-width: 0;
   }
@@ -1202,6 +1231,15 @@
       height: 75px;
       flex-shrink: 0;
     }
+
+    .product-page__dual-cta {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .product-page__dual-cta form {
+      width: 100%;
+      flex: none;
+    }
   }
 
   @media (max-width: 768px) {
@@ -1214,9 +1252,13 @@
   }
 
   @media (max-width: 600px) {
-    .product-page__tab-btn { padding: 8px 10px; font-size: 11px; }
+    .product-page__tab-btn { 
+      padding: 10px 6px; 
+      font-size: 10px; 
+      letter-spacing: 0;
+    }
     .product-page__customize-grid { grid-template-columns: 1fr; }
-    .product-recs__card { width: 150px; }
+    .product-recs__card-name { font-size: 12px; }
     .product-recs__title { font-size: 26px; }
   }
 

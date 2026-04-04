@@ -279,7 +279,25 @@
   @media (max-width: 600px) {
     .footer__grid {
       grid-template-columns: 1fr;
-      gap: var(--space-xl);
+      gap: var(--space-2xl);
+      text-align: center;
+    }
+    .footer__brand, .footer__column {
+      align-items: center;
+      display: flex;
+      flex-direction: column;
+    }
+    .footer__logo {
+      margin: 0 auto 16px;
+    }
+    .footer__brand-text {
+      margin: 0 auto;
+    }
+    .footer__links {
+      align-items: center;
+    }
+    .footer__link--icon {
+      justify-content: center;
     }
   }
 </style>

@@ -290,6 +290,7 @@
       display: flex;
       flex-direction: column;
       margin-bottom: var(--space-sm);
+      width: 100%;
     }
     .footer__column {
       align-items: center;
@@ -300,15 +301,25 @@
       align-items: center;
       text-align: center;
       gap: var(--space-lg);
+      width: 100%;
     }
     .footer__col-group .footer__column {
       align-items: center;
       width: 100%;
     }
     .footer__logo {
-      display: flex;
-      justify-content: center;
+      display: block;
+      text-align: center;
       margin: 0 auto 12px;
+      width: 100%;
+      padding-left: 14.5px; /* Visually nudged right to balance icon + text */
+    }
+    .footer__logo img {
+      display: block;
+      margin: 0 auto;
+      max-width: 160px;
+      width: auto;
+      height: auto;
     }
     .footer__brand-text {
       margin: 0 auto;

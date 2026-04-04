@@ -68,6 +68,11 @@
             <img src="{{ 'brand-logo.svg' | asset_url }}" alt="{{ shop.name }}" class="product-page__cert-logo product-page__cert-logo--right">
           </div>
 
+          <!-- Zoom highlight lens -->
+          <div class="product-page__zoom-lens" id="zoom-lens"></div>
+          <!-- Zoom result panel (Amazon-style) -->
+          <div class="product-page__zoom-result" id="zoom-result"></div>
+
           <div id="product-page-media-container">
             {%- if product.featured_media -%}
               {%- for media in product.media -%}
@@ -76,6 +81,7 @@
                     {%- when 'image' -%}
                       <img
                         src="{{ media | image_url: width: 1000 }}"
+                        data-zoom-src="{{ media | image_url: width: 2000 }}"
                         alt="{{ media.alt | default: product.title | escape }}"
                         class="product-page__main-img"
                         id="main-product-image-{{ media.id }}"
@@ -535,6 +541,7 @@
   @media (max-width: 768px) {
     .product-page__main-img-wrap {
       max-height: 65vh;
+      max-width: 100%;
     }
   }
 
@@ -543,6 +550,49 @@
     max-height: 100%;
     display: block;
     object-fit: contain;
+  }
+
+  /* Amazon-style zoom preview (desktop only) */
+  .product-page__media-item {
+    position: relative;
+  }
+
+  .product-page__zoom-lens {
+    display: none;
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border: 2px solid var(--color-gold, #c9a96e);
+    background: rgba(201, 169, 110, 0.15);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .product-page__zoom-result {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: calc(100% + 20px);
+    width: 500px;
+    height: 500px;
+    border: 1px solid #eee;
+    background-color: #fff;
+    background-repeat: no-repeat;
+    z-index: 100;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .product-page__main-img-wrap:hover .product-page__main-img {
+    cursor: crosshair;
+  }
+
+  @media (max-width: 992px) {
+    .product-page__zoom-lens,
+    .product-page__zoom-result {
+      display: none !important;
+    }
   }
 
   .product-page__img-placeholder {
@@ -1191,10 +1241,16 @@
   }
 
   @media (max-width: 768px) {
+    .product-page__wrapper {
+      overflow: hidden;
+    }
+
     .product-page__gallery {
       display: flex;
       flex-direction: column;
       gap: 16px;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .product-page__main-img-wrap {
@@ -1202,16 +1258,7 @@
     }
 
     .product-page__img-actions {
-      order: 2;
-      flex-direction: row;
-      justify-content: center;
-      padding-top: 0;
-      gap: 12px;
-    }
-
-    .product-page__img-action-btn {
-      width: 40px;
-      height: 40px;
+      display: none;
     }
 
     .product-page__thumbstrip {
@@ -1230,6 +1277,28 @@
       width: 75px;
       height: 75px;
       flex-shrink: 0;
+    }
+
+    .product-page__title-row {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .product-page__title {
+      font-size: 22px;
+    }
+
+    .product-page__badge-row {
+      flex-shrink: 1;
+    }
+
+    .product-page__meta-row {
+      flex-wrap: wrap;
+      font-size: 11px;
+    }
+
+    .product-page__price {
+      font-size: 22px;
     }
 
     .product-page__dual-cta {
@@ -1328,6 +1397,67 @@
     document.getElementById('price-update-badge').style.display = 'none';
   }
 
+  // Amazon-style Image Zoom (desktop only)
+  (function() {
+    if (window.innerWidth <= 992) return;
+
+    var wrap = document.querySelector('.product-page__main-img-wrap');
+    var lens = document.getElementById('zoom-lens');
+    var result = document.getElementById('zoom-result');
+    if (!wrap || !lens || !result) return;
+
+    var LENS_W = 200, LENS_H = 200;
+    var RESULT_W = 500, RESULT_H = 500;
+
+    function getActiveImg() {
+      var active = wrap.querySelector('.product-page__media-item.is-active .product-page__main-img');
+      return active;
+    }
+
+    wrap.addEventListener('mouseenter', function() {
+      var img = getActiveImg();
+      if (!img) return;
+      var zoomSrc = img.getAttribute('data-zoom-src') || img.src;
+      result.style.backgroundImage = 'url(' + zoomSrc + ')';
+    });
+
+    wrap.addEventListener('mousemove', function(e) {
+      var img = getActiveImg();
+      if (!img) return;
+
+      var rect = img.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+
+      if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+        lens.style.display = 'none';
+        result.style.display = 'none';
+        return;
+      }
+
+      lens.style.display = 'block';
+      result.style.display = 'block';
+
+      // Clamp lens position
+      var lensX = Math.max(0, Math.min(x - LENS_W / 2, rect.width - LENS_W));
+      var lensY = Math.max(0, Math.min(y - LENS_H / 2, rect.height - LENS_H));
+
+      lens.style.left = (lensX + (rect.left - wrap.getBoundingClientRect().left)) + 'px';
+      lens.style.top = (lensY + (rect.top - wrap.getBoundingClientRect().top)) + 'px';
+
+      // Calculate zoom ratio
+      var ratioX = RESULT_W / LENS_W;
+      var ratioY = RESULT_H / LENS_H;
+
+      result.style.backgroundSize = (rect.width * ratioX) + 'px ' + (rect.height * ratioY) + 'px';
+      result.style.backgroundPosition = '-' + (lensX * ratioX) + 'px -' + (lensY * ratioY) + 'px';
+    });
+
+    wrap.addEventListener('mouseleave', function() {
+      lens.style.display = 'none';
+      result.style.display = 'none';
+    });
+  })();
 
 </script>
 

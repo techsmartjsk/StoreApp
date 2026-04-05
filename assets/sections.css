@@ -1105,7 +1105,6 @@
 }
 
 .product-card__wishlist-btn:hover {
-  background: var(--color-gold);
   border-color: var(--color-gold);
   color: var(--color-white);
 }

@@ -155,14 +155,13 @@
 
         <!-- SKU / Origin / Reviews -->
         <div class="product-page__meta-row">
-          <span>SKU: {{ current_variant.sku | default: '87587' }}</span>
+          <span>SKU: {{ product.metafields.custom.sku | default: '87587' }}</span>
           <span class="product-page__meta-sep">|</span>
-          <span>Origin: {{ product.metafields.gem.origin | default: 'Sri Lanka' }}</span>
-          <span class="product-page__meta-sep">|</span>
-          {% comment %} <span class="product-page__reviews-inline">
-            Reviews ({{ product.metafields.reviews.rating_count | default: '23' }})
-            <span class="product-page__stars">★★★★★</span>
-          </span> {% endcomment %}
+          <span>Origin: {{ product.metafields.custom.origin | default: 'Ceylon / Sri Lanka' }}</span>
+          {%- if product.metafields.custom.weight_carat != blank -%}
+            <span class="product-page__meta-sep">|</span>
+            <span>Weight: {{ product.metafields.custom.weight_carat }} Carat</span>
+          {%- endif -%}
         </div>
 
         <div class="product-page__divider"></div>

@@ -69,6 +69,8 @@
   {%- if _active_count > 0 -%}
     <div class="active-facets" id="ActiveFacets">
       {%- for filter in results.filters -%}
+        {%- assign _flbl = filter.label | handleize -%}
+        {%- if _flbl contains 'weight' -%}{%- continue -%}{%- endif -%}
         {%- for value in filter.active_values -%}
           <a class="active-facets__button" href="{{ value.url_to_remove }}">
             <span class="active-facets__button-inner">

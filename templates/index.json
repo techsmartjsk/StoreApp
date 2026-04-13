@@ -216,7 +216,7 @@
           "settings": {
             "label": "Health",
             "icon": "health",
-            "url": "/collections/health"
+            "url": "/collections/red-coral"
           }
         },
         "p_2": {
@@ -224,7 +224,7 @@
           "settings": {
             "label": "Career",
             "icon": "career",
-            "url": "/collections/career"
+            "url": "/collections/blue-sapphire"
           }
         },
         "p_3": {
@@ -232,7 +232,7 @@
           "settings": {
             "label": "Wealth",
             "icon": "wealth",
-            "url": "/collections/wealth"
+            "url": "/collections/emerald"
           }
         },
         "p_4": {
@@ -240,7 +240,7 @@
           "settings": {
             "label": "Education",
             "icon": "education",
-            "url": "/collections/education"
+            "url": "/collections/yellow-sapphire"
           }
         },
         "p_5": {
@@ -248,7 +248,7 @@
           "settings": {
             "label": "Relationship",
             "icon": "relationship",
-            "url": "/collections/relationship"
+            "url": "/collections/white-sapphire"
           }
         },
         "p_6": {
@@ -256,7 +256,7 @@
           "settings": {
             "label": "Peace",
             "icon": "peace",
-            "url": "/collections/peace"
+            "url": "/collections/pearl"
           }
         }
       },
@@ -513,7 +513,7 @@
           "type": "gem_card",
           "settings": {
             "title": "RUBY",
-            "asset_name": "nav-ruby.png",
+            "asset_name": "sacred-ess-ruby.jpg",
             "origins": "Burma, Africa, Mozambique",
             "treatment": "Untreated, No artificial colours and treatment",
             "url": "/collections/ruby"
@@ -523,7 +523,7 @@
           "type": "gem_card",
           "settings": {
             "title": "EMERALD",
-            "asset_name": "nav-emerald.png",
+            "asset_name": "sacred-ess-emerald.jpg",
             "origins": "Zambia, Brazil, Columbia",
             "treatment": "Minor oil, No artificial resin",
             "url": "/collections/emerald"
@@ -533,7 +533,7 @@
           "type": "gem_card",
           "settings": {
             "title": "YELLOW SAPPHIRE",
-            "asset_name": "nav-yellow-sapphire.png",
+            "asset_name": "sacred-ess-yellow-sapphire.jpg",
             "origins": "Sri Lanka, Bangkok",
             "treatment": "Unheated, No beryllium, No artificial treatment",
             "url": "/collections/yellow-sapphire"
@@ -543,7 +543,7 @@
           "type": "gem_card",
           "settings": {
             "title": "BLUE SAPPHIRE",
-            "asset_name": "nav-blue-sapphire.png",
+            "asset_name": "sacred-ess-bluesapphire.jpg",
             "origins": "Sri Lanka, Madagascar, Kashmir",
             "treatment": "Unheated, No beryllium, No diffusion",
             "url": "/collections/blue-sapphire"
@@ -563,7 +563,7 @@
           "type": "gem_card",
           "settings": {
             "title": "PEARL",
-            "asset_name": "nav-pearl.png",
+            "asset_name": "sacred-ess-pearl.jpg",
             "origins": "South Sea, Basra, Freshwater",
             "treatment": "Natural, No coating, No artificial lustre",
             "url": "/collections/pearl"
@@ -573,7 +573,7 @@
           "type": "gem_card",
           "settings": {
             "title": "CORAL",
-            "asset_name": "nav-red-coral.png",
+            "asset_name": "sacred-ess-red-coral.jpg",
             "origins": "Italian, Japanese",
             "treatment": "Natural, No dye, No polymer filling",
             "url": "/collections/red-coral"
@@ -583,7 +583,7 @@
           "type": "gem_card",
           "settings": {
             "title": "HESSONITE",
-            "asset_name": "nav-hessonite.png",
+            "asset_name": "sacred-ess-hessonite.jpg",
             "origins": "Sri Lanka, Africa",
             "treatment": "Untreated, Natural Gomed",
             "url": "/collections/hessonite"
@@ -593,7 +593,7 @@
           "type": "gem_card",
           "settings": {
             "title": "CAT'S EYE",
-            "asset_name": "nav-catseye.png",
+            "asset_name": "sacred-ess-cats-eye.jpg",
             "origins": "Sri Lanka, Brazil",
             "treatment": "Untreated, Natural Lehsunia",
             "url": "/collections/cateye"
@@ -603,7 +603,7 @@
           "type": "gem_card",
           "settings": {
             "title": "OPAL",
-            "asset_name": "nav-opal.png",
+            "asset_name": "sacred-ess-opal.jpg",
             "origins": "Australia, Ethiopia",
             "treatment": "Natural, No smoke treatment, No sugar treatment",
             "url": "/collections/opal"

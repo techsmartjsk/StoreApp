@@ -514,6 +514,7 @@
           "settings": {
             "title": "RUBY",
             "asset_name": "sacred-ess-ruby.jpg",
+            "stone_asset_name": "nav-ruby.png",
             "origins": "Burma, Africa, Mozambique",
             "treatment": "Untreated, No artificial colours and treatment",
             "url": "/collections/ruby"
@@ -524,6 +525,7 @@
           "settings": {
             "title": "EMERALD",
             "asset_name": "sacred-ess-emerald.jpg",
+            "stone_asset_name": "nav-emerald.png",
             "origins": "Zambia, Brazil, Columbia",
             "treatment": "Minor oil, No artificial resin",
             "url": "/collections/emerald"
@@ -534,6 +536,7 @@
           "settings": {
             "title": "YELLOW SAPPHIRE",
             "asset_name": "sacred-ess-yellow-sapphire.jpg",
+            "stone_asset_name": "nav-yellow-sapphire.png",
             "origins": "Sri Lanka, Bangkok",
             "treatment": "Unheated, No beryllium, No artificial treatment",
             "url": "/collections/yellow-sapphire"
@@ -544,6 +547,7 @@
           "settings": {
             "title": "BLUE SAPPHIRE",
             "asset_name": "sacred-ess-bluesapphire.jpg",
+            "stone_asset_name": "nav-blue-sapphire.png",
             "origins": "Sri Lanka, Madagascar, Kashmir",
             "treatment": "Unheated, No beryllium, No diffusion",
             "url": "/collections/blue-sapphire"
@@ -564,6 +568,7 @@
           "settings": {
             "title": "PEARL",
             "asset_name": "sacred-ess-pearl.jpg",
+            "stone_asset_name": "nav-pearl.png",
             "origins": "South Sea, Basra, Freshwater",
             "treatment": "Natural, No coating, No artificial lustre",
             "url": "/collections/pearl"
@@ -574,6 +579,7 @@
           "settings": {
             "title": "CORAL",
             "asset_name": "sacred-ess-red-coral.jpg",
+            "stone_asset_name": "nav-red-coral.png",
             "origins": "Italian, Japanese",
             "treatment": "Natural, No dye, No polymer filling",
             "url": "/collections/red-coral"
@@ -584,6 +590,7 @@
           "settings": {
             "title": "HESSONITE",
             "asset_name": "sacred-ess-hessonite.jpg",
+            "stone_asset_name": "nav-hessonite.png",
             "origins": "Sri Lanka, Africa",
             "treatment": "Untreated, Natural Gomed",
             "url": "/collections/hessonite"
@@ -594,6 +601,7 @@
           "settings": {
             "title": "CAT'S EYE",
             "asset_name": "sacred-ess-cats-eye.jpg",
+            "stone_asset_name": "nav-catseye.png",
             "origins": "Sri Lanka, Brazil",
             "treatment": "Untreated, Natural Lehsunia",
             "url": "/collections/cateye"

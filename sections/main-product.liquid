@@ -98,9 +98,9 @@
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </button>
-          <button class="product-page__img-action-btn" aria-label="Zoom" onclick="zoomActiveImage()">
+          {% comment %}<button class="product-page__img-action-btn" aria-label="Zoom" onclick="zoomActiveImage()">
             <img src="{{ 'zoom-in.svg' | asset_url }}" alt="Zoom" style="width: 16px; height: 16px; object-fit: contain;">
-          </button>
+          </button>{% endcomment %}
         </div>
 
         <!-- Main image -->
@@ -112,8 +112,8 @@
             {%- endif -%}
           </div> {% endcomment %}
 
-          <!-- Zoom highlight lens -->
-          <div class="product-page__zoom-lens" id="zoom-lens"></div>
+          {% comment %}<!-- Zoom highlight lens -->
+          <div class="product-page__zoom-lens" id="zoom-lens"></div>{% endcomment %}
 
           <div id="product-page-media-container">
             {%- if product.featured_media -%}
@@ -174,8 +174,8 @@
         </div>
       </div>
 
-      <!-- Zoom result panel (Amazon-style, positioned over info area) -->
-      <div class="product-page__zoom-result" id="zoom-result"></div>
+      {% comment %}<!-- Zoom result panel (Amazon-style, positioned over info area) -->
+      <div class="product-page__zoom-result" id="zoom-result"></div>{% endcomment %}
 
       <!-- Product Info -->
       <div class="product-page__info">
@@ -280,7 +280,7 @@
                 <span class="product-page__spec-label">Weight</span>
                 <span class="product-page__spec-value">
                   {% if product.metafields.custom.weight_carats %}{{ product.metafields.custom.weight_carats }} Carat{% else %}6.02 Carat{% endif %} /
-                  {% if product.metafields.custom.weight_ratti %}{{ product.metafields.custom.weight_ratti }} Ratti{% else %}6.68 Ratti{% endif %}
+                  {% if product.metafields.custom.weight_ratti %}{{ product.metafields.custom.weight_ratti | times: 1.0 | round: 2 }} Ratti{% else %}6.68 Ratti{% endif %}
                 </span>
               </div>
               <div class="product-page__spec-item">
@@ -904,52 +904,15 @@
     object-fit: contain;
   }
 
-  /* Amazon-style zoom preview (desktop only) */
   .product-page__media-item {
     position: relative;
-  }
-
-  .product-page__zoom-lens {
-    display: none;
-    position: absolute;
-    width: 200px;
-    height: 200px;
-    border: 2px solid var(--color-gold, #c9a96e);
-    background: rgba(201, 169, 110, 0.15);
-    pointer-events: none;
-    z-index: 10;
   }
 
   .product-page__wrapper {
     position: relative;
   }
 
-  .product-page__zoom-result {
-    display: none;
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 50%;
-    height: 600px;
-    border: 1px solid #eee;
-    background-color: #fff;
-    background-repeat: no-repeat;
-    z-index: 100;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .product-page__main-img-wrap:hover .product-page__main-img {
-    cursor: crosshair;
-  }
-
-  @media (max-width: 992px) {
-    .product-page__zoom-lens,
-    .product-page__zoom-result {
-      display: none !important;
-    }
-  }
+  /* Zoom CSS commented out */
 
   .product-page__img-placeholder {
     aspect-ratio: 1;
@@ -2513,7 +2476,7 @@
             {% if product.metafields.custom.weight_carats != blank %}
             'Weight': '{{ product.metafields.custom.weight_carats | escape }} Carat',
             {% elsif product.metafields.custom.weight_ratti != blank %}
-            'Weight (Ratti)': '{{ product.metafields.custom.weight_ratti | escape }} Ratti',
+            'Weight (Ratti)': '{{ product.metafields.custom.weight_ratti | times: 1.0 | round: 2 | escape }} Ratti',
             {% endif %}
             'Origin': '{{ product.metafields.custom.origin | default: "Ceylon / Sri Lanka" | escape }}',
             'Gem Type': '{{ product.metafields.custom.gem_type | default: product.type | escape }}',
@@ -2754,89 +2717,11 @@
     if (e.key === 'Escape') closeVideoPopup();
   });
 
-  function zoomActiveImage() {
-    const activeMedia = document.querySelector('.product-page__media-item.is-active img');
-    if (activeMedia) {
-      if (activeMedia.requestFullscreen) {
-        activeMedia.requestFullscreen();
-      } else if (activeMedia.webkitRequestFullscreen) {
-        activeMedia.webkitRequestFullscreen();
-      } else if (activeMedia.msRequestFullscreen) {
-        activeMedia.msRequestFullscreen();
-      }
-    }
-  }
-
+  /* Zoom functionality commented out
+  function zoomActiveImage() { ... }
   // Amazon-style Image Zoom (desktop only)
-  (function() {
-    if (window.innerWidth <= 992) return;
-
-    var wrap = document.querySelector('.product-page__main-img-wrap');
-    var lens = document.getElementById('zoom-lens');
-    var result = document.getElementById('zoom-result');
-    if (!wrap || !lens || !result) return;
-
-    var LENS_W = 200, LENS_H = 200;
-
-    function getActiveImg() {
-      return wrap.querySelector('.product-page__media-item.is-active .product-page__main-img');
-    }
-
-    wrap.addEventListener('mouseenter', function() {
-      var img = getActiveImg();
-      if (!img) return;
-      var zoomSrc = img.getAttribute('data-zoom-src') || img.src;
-      // Preload high-res image
-      var preload = new Image();
-      preload.src = zoomSrc;
-      result.style.backgroundImage = 'url(' + zoomSrc + ')';
-    });
-
-    wrap.addEventListener('mousemove', function(e) {
-      var img = getActiveImg();
-      if (!img) return;
-
-      var rect = img.getBoundingClientRect();
-      var wrapRect = wrap.getBoundingClientRect();
-      var x = e.clientX - rect.left;
-      var y = e.clientY - rect.top;
-
-      if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
-        lens.style.display = 'none';
-        result.style.display = 'none';
-        return;
-      }
-
-      lens.style.display = 'block';
-      result.style.display = 'block';
-
-      // Clamp lens so it stays within the image
-      var lensX = Math.max(0, Math.min(x - LENS_W / 2, rect.width - LENS_W));
-      var lensY = Math.max(0, Math.min(y - LENS_H / 2, rect.height - LENS_H));
-
-      // Position lens relative to wrap
-      lens.style.left = (lensX + rect.left - wrapRect.left) + 'px';
-      lens.style.top = (lensY + rect.top - wrapRect.top) + 'px';
-
-      // Result panel dimensions
-      var resultRect = result.getBoundingClientRect();
-      var RESULT_W = resultRect.width;
-      var RESULT_H = resultRect.height;
-
-      // Zoom ratio: how much bigger the result is than the lens
-      var ratioX = RESULT_W / LENS_W;
-      var ratioY = RESULT_H / LENS_H;
-
-      // Background = full image scaled up by ratio
-      result.style.backgroundSize = (rect.width * ratioX) + 'px ' + (rect.height * ratioY) + 'px';
-      result.style.backgroundPosition = '-' + (lensX * ratioX) + 'px -' + (lensY * ratioY) + 'px';
-    });
-
-    wrap.addEventListener('mouseleave', function() {
-      lens.style.display = 'none';
-      result.style.display = 'none';
-    });
-  })();
+  (function() { ... })();
+  */
 
 </script>
 

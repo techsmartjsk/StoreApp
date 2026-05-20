@@ -1,0 +1,15 @@
+{
+  "sections": {
+    "hero_tabs": {
+      "type": "collection-hero-tabs",
+      "settings": {}
+    },
+    "main": {
+      "type": "main-collection",
+      "settings": {
+        "products_per_page": 16
+      }
+    }
+  },
+  "order": ["hero_tabs", "main"]
+}

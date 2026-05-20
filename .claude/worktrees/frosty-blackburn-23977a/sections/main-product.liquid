@@ -1,0 +1,3130 @@
+{%- comment -%}Main Product Section{%- endcomment -%}
+
+{%- assign current_variant = product.selected_or_first_available_variant -%}
+
+{%- comment -%} Removed- [x] Overhaul Customization Modal UI in `main-product.liquid`
+    - [x] Create horizontal icon selection for Ring/Pendant/Bracelet
+    - [x] Create Metal selection dropdown
+    - [x] Create Design Grid with images and prices
+- [x] Add Customization Styles to `sections.css`
+    - [x] Design the horizontal row and grid layout
+    - [x] Match typography and colors from reference image
+- [x] Implement Dynamic Pricing Logic
+    - [x] Create `updateTotalPrice()` in `main-product.liquid` scripts
+    - [x] Update `CustomizeApp.set()` to track fees for each selection
+    - [x] Link certification fee selection to the total price
+- [x] Implement Cart Integration
+    - [x] Add AJAX "parallel add" for customization fees
+    - [x] Ensure linked line item properties in `main-product.liquid` / `theme.js`
+    - [x] Add JS to handle certification fee updates
+    - [x] Add form submission interceptors for cart attributes {%- endcomment -%}
+
+<section class="product-page" id="product-{{ product.id }}">
+  <div class="page-width">
+    <!-- Breadcrumb moved here -->
+    <nav class="breadcrumb breadcrumb--pdp" aria-label="breadcrumb">
+      <a href="/">Home</a>
+      <span class="breadcrumb__sep">›</span>
+      {%- if product.collections.first -%}
+        <a href="{{ product.collections.first.url }}">{{ product.collections.first.title }}</a>
+        <span class="breadcrumb__sep">›</span>
+      {%- endif -%}
+      <a href="{{ product.url }}">{{ product.title }}</a>
+    </nav>
+
+    <div class="product-page__wrapper">
+
+      <!-- Gallery -->
+      <div class="product-page__gallery">
+
+        <!-- Vertical thumbnail strip -->
+        <div class="product-page__thumbstrip">
+          {%- for media in product.media -%}
+            <button
+              class="product-page__thumb{% if forloop.first %} product-page__thumb--active{% endif %}"
+              onclick="setMainMedia('{{ media.id }}', this)"
+              aria-label="View {{ media.media_type | replace: '_', ' ' }} {{ forloop.index }}"
+              data-media-id="{{ media.id }}"
+            >
+              {%- if media.media_type contains 'video' -%}
+                <div class="product-page__thumb-video-icon">
+                  {% render 'icon', name: 'play' %}
+                </div>
+              {%- endif -%}
+              <img
+                src="{{ media.preview_image | image_url: width: 120 }}"
+                alt="{{ media.alt | default: product.title | escape }}"
+                loading="lazy"
+              >
+            </button>
+          {%- endfor -%}
+          {%- if product.metafields.custom.video != blank -%}
+            {%- assign vimeo_url = product.metafields.custom.video -%}
+            {%- assign vimeo_id = vimeo_url | split: 'vimeo.com/' | last | split: '?' | first -%}
+            <button
+              class="product-page__thumb"
+              onclick="setMainMedia('metafield-video', this)"
+              aria-label="View video"
+              data-media-id="metafield-video"
+            >
+              <div class="product-page__thumb-video-icon">
+                {% render 'icon', name: 'play' %}
+              </div>
+              <img
+                src="https://vumbnail.com/{{ vimeo_id }}.jpg"
+                alt="Video"
+                loading="lazy"
+              >
+            </button>
+          {%- endif -%}
+        </div>
+
+        <!-- Action icons (between thumbs and image) -->
+        <div class="product-page__img-actions">
+          <button class="product-page__img-action-btn" aria-label="Share" onclick="copyToClipboard(window.location.href, this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <button 
+            class="product-page__img-action-btn" 
+            aria-label="Wishlist"
+            data-wishlist-toggle
+            data-product-id="{{ product.id }}"
+            data-product-title="{{ product.title | escape }}"
+            data-product-url="{{ product.url }}"
+            data-product-price="{{ product.price | money }}"
+            data-product-image="{{ product.featured_image | image_url: width: 600 }}"
+            data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+            onclick="event.preventDefault(); WishlistApp.toggle(this)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          {% comment %}<button class="product-page__img-action-btn" aria-label="Zoom" onclick="zoomActiveImage()">
+            <img src="{{ 'zoom-in.svg' | asset_url }}" alt="Zoom" style="width: 16px; height: 16px; object-fit: contain;">
+          </button>{% endcomment %}
+        </div>
+
+        <!-- Main image -->
+        <div class="product-page__main-img-wrap">
+          <!-- Certification logos overlaid on image -->
+          {% comment %} <div class="product-page__cert-logos">
+            {%- if section.settings.cert_logo != blank -%}
+              <img src="{{ section.settings.cert_logo | image_url: width: 160 }}" alt="Certification" class="product-page__cert-logo product-page__cert-logo--left">
+            {%- endif -%}
+          </div> {% endcomment %}
+
+          {% comment %}<!-- Zoom highlight lens -->
+          <div class="product-page__zoom-lens" id="zoom-lens"></div>{% endcomment %}
+
+          <div id="product-page-media-container">
+            {%- if product.featured_media -%}
+              {%- for media in product.media -%}
+                <div class="product-page__media-item {% if media.id == product.featured_media.id %}is-active{% endif %}" data-media-id="{{ media.id }}" style="display: {% if media.id == product.featured_media.id %}block{% else %}none{% endif %};">
+                  {%- case media.media_type -%}
+                    {%- when 'image' -%}
+                      <img
+                        src="{{ media | image_url: width: 1000 }}"
+                        data-zoom-src="{{ media | image_url: width: 2000 }}"
+                        alt="{{ media.alt | default: product.title | escape }}"
+                        class="product-page__main-img"
+                        id="main-product-image-{{ media.id }}"
+                      >
+                    {%- when 'external_video' -%}
+                      <div class="product-page__video-preview" data-video-type="external" data-media-id="{{ media.id }}"
+                        {%- if media.host == 'youtube' %} data-video-url="https://www.youtube.com/embed/{{ media.external_id }}?autoplay=1"{% endif -%}
+                        {%- if media.host == 'vimeo' %} data-video-url="https://player.vimeo.com/video/{{ media.external_id }}?autoplay=1&outro=nothing"{% endif -%}
+                        onclick="openVideoPopup(this)">
+                        <img src="{{ media.preview_image | image_url: width: 1000 }}" alt="{{ media.alt | default: product.title | escape }}" class="product-page__main-img" loading="lazy">
+                        <div class="product-page__video-play-btn">
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </div>
+                      </div>
+                    {%- when 'video' -%}
+                      <div class="product-page__video-preview" data-video-type="native" data-media-id="{{ media.id }}" onclick="openVideoPopup(this)">
+                        <img src="{{ media.preview_image | image_url: width: 1000 }}" alt="{{ media.alt | default: product.title | escape }}" class="product-page__main-img" loading="lazy">
+                        <div class="product-page__video-play-btn">
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </div>
+                        <video class="product-page__video-source" style="display:none;" preload="metadata">
+                          {%- for source in media.sources -%}
+                            <source src="{{ source.url }}" type="{{ source.mime_type }}">
+                          {%- endfor -%}
+                        </video>
+                      </div>
+                  {%- endcase -%}
+                </div>
+              {%- endfor -%}
+              {%- if product.metafields.custom.video != blank -%}
+                {%- assign mf_vimeo_url = product.metafields.custom.video -%}
+                {%- assign mf_vimeo_id = mf_vimeo_url | split: 'vimeo.com/' | last | split: '?' | first -%}
+                <div class="product-page__media-item" data-media-id="metafield-video" style="display:none;">
+                  <div class="product-page__video-preview" data-video-type="external" data-video-url="https://player.vimeo.com/video/{{ mf_vimeo_id }}?autoplay=1&outro=nothing" onclick="openVideoPopup(this)">
+                    <img src="https://vumbnail.com/{{ mf_vimeo_id }}.jpg" alt="Video" class="product-page__main-img" loading="lazy">
+                    <div class="product-page__video-play-btn">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </div>
+                  </div>
+                </div>
+              {%- endif -%}
+            {%- else -%}
+              <div class="product-page__img-placeholder">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </div>
+            {%- endif -%}
+          </div>
+        </div>
+      </div>
+
+      {% comment %}<!-- Zoom result panel (Amazon-style, positioned over info area) -->
+      <div class="product-page__zoom-result" id="zoom-result"></div>{% endcomment %}
+
+      <!-- Product Info -->
+      <div class="product-page__info">
+
+        <!-- Vendor -->
+        {%- if product.vendor -%}
+          <p class="product-page__vendor">{{ product.vendor }}</p>
+        {%- endif -%}
+
+        <!-- Title + badges row -->
+        <div class="product-page__title-row">
+          <h1 class="product-page__title">{{ product.title }}</h1>
+        </div>
+
+        <!-- SKU / Origin / Reviews -->
+        <div class="product-page__meta-row">
+          <span>SKU: {{ product.metafields.custom.sku_number | default: '87587' }}</span>
+          <span class="product-page__meta-sep">|</span>
+          <span>Origin: {{ product.metafields.custom.origin | default: 'Ceylon / Sri Lanka' }}</span>
+          {%- if product.metafields.custom.weight_carats != blank -%}
+            <span class="product-page__meta-sep">|</span>
+            <span>Weight: {{ product.metafields.custom.weight_carats }} Carat</span>
+          {%- endif -%}
+        </div>
+
+        <div class="product-page__divider"></div>
+
+        <!-- Price -->
+        <div class="product-page__price-row">
+          {%- if product.price > 100000000 -%}
+            <span class="product-page__price">Request Price</span>
+          {%- else -%}
+            <span class="product-page__price">{{ current_variant.price | money }}</span>
+            {%- if product.compare_at_price > product.price -%}
+              <span class="product-page__compare-price">{{ product.compare_at_price | money }}</span>
+            {%- endif -%}
+            <span class="product-page__price-note">(MRP incl. of all taxes)</span>
+            <span class="product-page__price-update-badge" id="price-update-badge" style="display:none;">● PRICE UPDATE</span>
+          {%- endif -%}
+        </div>
+
+        <div class="product-page__divider"></div>
+
+        <!-- Tabs -->
+        <div class="product-page__tabs">
+          <div class="product-page__tab-nav" role="tablist">
+            <button class="product-page__tab-btn product-page__tab-btn--active" onclick="switchTab('about', this)" role="tab">About this Gem</button>
+            <button class="product-page__tab-btn" onclick="switchTab('know-gem', this)" role="tab">Know your gem</button>
+            <button class="product-page__tab-btn" onclick="switchTab('planetary', this)" role="tab">Planetary Alignment</button>
+            <button class="product-page__tab-btn" onclick="switchTab('faqs', this)" role="tab">FAQs</button>
+            {%- if product.price > 100000000 -%}
+              <button class="product-page__tab-btn" onclick="switchTab('special', this)" role="tab">Why this gem is special</button>
+            {%- endif -%}
+          </div>
+          <div class="product-page__tab-pane product-page__tab-pane--active" id="tab-about">
+            <div class="product-page__tab-pane-inner">
+            {%- if product.metafields.custom.tagline != blank or product.metafields.custom.tagline_hindi != blank -%}
+              <div class="product-page__taglines">
+                {% if product.metafields.custom.tagline %}<p class="product-page__tagline-en">{{ product.metafields.custom.tagline }}</p>{% endif %}
+                {% if product.metafields.custom.tagline_hindi %}<p class="product-page__tagline-hi">{{ product.metafields.custom.tagline_hindi }}</p>{% endif %}
+              </div>
+            {%- endif -%}
+
+            {%- if product.metafields.custom.editorial != blank -%}
+              <div class="product-page__description">
+                {{ product.metafields.custom.editorial | newline_to_br }}
+              </div>
+            {%- elsif product.description != blank -%}
+              <div class="product-page__description">
+                {{ product.description }}
+              </div>
+            {%- else -%}
+              <h4 class="product-page__tab-heading">About this Gem</h4>
+              <p>Discover the unique story and origin of this natural {{ product.type | default: 'gemstone' }}. Each piece in our collection is handpicked for its exceptional clarity, vibrant color, and sacred energy.</p>
+            {%- endif -%}
+
+            <!-- Specs Grid -->
+            <div class="product-page__specs-grid">
+              <div class="product-page__spec-item">
+                <span class="product-page__spec-label">Gem Type</span>
+                <span class="product-page__spec-value">{{ product.metafields.custom.gem_type | default: 'Blue Sapphire' }}</span>
+              </div>
+              <div class="product-page__spec-item">
+                <span class="product-page__spec-label">Origin</span>
+                <span class="product-page__spec-value">{{ product.metafields.custom.origin | default: 'Ceylon / Sri Lanka' }}</span>
+              </div>
+              <div class="product-page__spec-item">
+                <span class="product-page__spec-label">Weight</span>
+                <span class="product-page__spec-value">
+                  {% if product.metafields.custom.weight_carats %}{{ product.metafields.custom.weight_carats }} Carat{% else %}6.02 Carat{% endif %} /
+                  {% if product.metafields.custom.weight_ratti %}{{ product.metafields.custom.weight_ratti | times: 1.0 | round: 2 }} Ratti{% else %}6.68 Ratti{% endif %}
+                </span>
+              </div>
+              <div class="product-page__spec-item">
+                <span class="product-page__spec-label">Shape / Cut</span>
+                <span class="product-page__spec-value">
+                  {{ product.metafields.custom.shape_cut | default: 'Oval' }} ({{ product.metafields.custom.cutting_style | default: 'Mixed Cut' }})
+                </span>
+              </div>
+              {%- if product.metafields.custom.shape_description != blank -%}
+                <div class="product-page__spec-item product-page__spec-item--full">
+                  <span class="product-page__spec-label">Shape Description</span>
+                  <span class="product-page__spec-value">{{ product.metafields.custom.shape_description }}</span>
+                </div>
+              {%- endif -%}
+              <div class="product-page__spec-item">
+                <span class="product-page__spec-label">Transparency</span>
+                <span class="product-page__spec-value">{{ product.metafields.custom.transparency | default: 'Transparent' }}</span>
+              </div>
+              {%- if product.metafields.custom.color_description != blank -%}
+                <div class="product-page__spec-item">
+                  <span class="product-page__spec-label">Color</span>
+                  <span class="product-page__spec-value">{{ product.metafields.custom.color_description }}</span>
+                </div>
+              {%- endif -%}
+              {%- if product.metafields.custom.cert_lab != blank -%}
+                <div class="product-page__spec-item product-page__spec-item--full product-page__spec-item--inline">
+                  <span class="product-page__spec-label">Certification</span>
+                  <span class="product-page__spec-value">{{ product.metafields.custom.cert_lab }} : {{ product.metafields.custom.cert_number }} (<a href="{{ product.metafields.custom.cert_link }}" target="_blank" style="color:var(--color-gold); text-decoration:underline;">Verify your certificate</a>)</span>
+                </div>
+              {%- endif -%}
+              <div class="product-page__spec-item">
+                <span class="product-page__spec-label">Planet</span>
+                <span class="product-page__spec-value">{{ product.metafields.custom.planetary_alignment | default: 'Saturn (Shani)' }}</span>
+              </div>
+              {%- if product.metafields.custom.wow_factor != blank -%}
+                <div class="product-page__spec-item product-page__spec-item--full">
+                  <span class="product-page__spec-label">Special Features</span>
+                  <span class="product-page__spec-value">{{ product.metafields.custom.wow_factor | newline_to_br }}</span>
+                </div>
+              {%- endif -%}
+            </div>
+            </div>
+            <button class="product-page__read-more-btn" data-read-more>Read More</button>
+          </div>
+          <div class="product-page__tab-pane" id="tab-know-gem">
+            <div class="product-page__tab-pane-inner">
+            <h4 class="product-page__tab-heading">Know your gem</h4>
+            <div class="product-page__specs-table">
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Species & Variety</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.gems_title | default: 'Natural Corundum' }}</div>
+              </div>
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Refractive Index (RI)</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.refractive_index | default: '1.760 - 1.770' }}</div>
+              </div>
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Specific Gravity (SG)</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.specific_gravity | default: '3.99 - 4.00' }}</div>
+              </div>
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Internal Characteristics</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.clarity_description | default: 'Silk, fingerprint' }}</div>
+              </div>
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Dimensions</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.dimensions | default: '14.27 * 12.37 * 4.20' }} mm</div>
+              </div>
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Origin</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.origin | default: '—' }}</div>
+              </div>
+              <div class="product-page__specs-row">
+                <div class="product-page__specs-label">Treatment Status</div>
+                <div class="product-page__specs-val">{{ product.metafields.custom.treatment_status | default: '—' }}</div>
+              </div>
+            </div>
+            </div>
+            <button class="product-page__read-more-btn" data-read-more>Read More</button>
+          </div>
+          <div class="product-page__tab-pane" id="tab-planetary">
+            <div class="product-page__tab-pane-inner">
+            <h4 class="product-page__tab-heading">Planetary Alignment</h4>
+            {%- if product.metafields.custom.planetary_alignment_desc != blank -%}
+              {{ product.metafields.custom.planetary_alignment_desc }}
+            {%- else -%}
+              <p>This gem is harmonized with its ruling celestial body to provide maximum astrological benefits. Wear it to align your personal energy with the cosmic vibrations of {{ product.metafields.custom.planetary_alignment | default: 'Saturn (Shani)' }}.</p>
+            {%- endif -%}
+
+            <h4 class="product-page__tab-heading" style="margin-top:24px;">Purification and Energisation</h4>
+            {%- if product.metafields.gem.purification != blank -%}
+              {{ product.metafields.gem.purification }}
+            {%- else -%}
+              <p>Before wearing, it is essential to purify and energize your gem to remove any previous imprints and activate its sacred properties.</p>
+              <ul class="product-page__tab-list">
+                <li>Wash gently in raw milk and gangajal.</li>
+                <li>Chant the specific Beej Mantra 108 times.</li>
+                <li>Wear it on the designated finger during the shubh mahurat.</li>
+              </ul>
+            {%- endif -%}
+            </div>
+            <button class="product-page__read-more-btn" data-read-more>Read More</button>
+          </div>
+
+          {%- comment -%} ── FAQs Tab ── {%- endcomment -%}
+          {%- assign faq_gem_type = product.metafields.custom.gem_type | default: product.type | default: 'gemstone' -%}
+          {%- assign faq_cert_lab = product.metafields.custom.cert_lab | default: '' -%}
+          {%- assign faq_cert_number = product.metafields.custom.cert_number | default: '' -%}
+          {%- assign faq_cert_date = product.metafields.custom.cert_date | default: '' -%}
+          {%- assign faq_origin = product.metafields.custom.origin | default: '' -%}
+          {%- assign faq_variety = product.metafields.custom.gems_title | default: '' -%}
+          {%- assign faq_carats = product.metafields.custom.weight_carats | default: 0 -%}
+          {%- assign faq_carats_grams = faq_carats | times: 0.2 | round: 3 -%}
+          {%- assign faq_dimensions = product.metafields.custom.dimensions | default: '' -%}
+          {%- assign faq_shape = product.metafields.custom.shape_cut | default: '' -%}
+          {%- assign faq_treatment_raw = product.metafields.custom.treatment_status | default: '' -%}
+          {%- assign faq_treatment_label = faq_treatment_raw | downcase -%}
+          {%- assign faq_treatment_key = faq_treatment_raw | downcase | strip | replace: ' ', '_' | replace: '-', '_' -%}
+
+          <div class="product-page__tab-pane" id="tab-faqs">
+            <div class="product-page__tab-pane-inner">
+              <h4 class="product-page__tab-heading">Frequently Asked Questions</h4>
+
+              <div class="product-page__faq-list">
+
+                {%- comment -%} Q1 — Treatment {%- endcomment -%}
+                {%- if faq_treatment_raw != blank and faq_cert_lab != blank -%}
+                  <div class="product-page__faq-item">
+                    <p class="product-page__faq-q">1. Is this gem treated?</p>
+                    <p class="product-page__faq-a">This {{ faq_gem_type }} is {{ faq_treatment_label }}, as disclosed on the {{ faq_cert_lab }} certificate. Treatment status is permanent and does not change over time.</p>
+                  </div>
+                {%- endif -%}
+
+                {%- comment -%} Q2 — Certification {%- endcomment -%}
+                {%- if faq_cert_lab != blank -%}
+                  <div class="product-page__faq-item">
+                    <p class="product-page__faq-q">2. Which lab has certified this gem?</p>
+                    <p class="product-page__faq-a">
+                      This {{ faq_gem_type }} is certified by {{ faq_cert_lab }}{% if faq_cert_number != blank %}, report number {{ faq_cert_number }}{% endif %}{% if faq_cert_date != blank %}, issued on {{ faq_cert_date }}{% endif %}. The full certificate is included with the stone and is available for verification.
+                    </p>
+                  </div>
+                {%- endif -%}
+
+                {%- comment -%} Q3 — Origin {%- endcomment -%}
+                {%- if faq_origin != blank -%}
+                  <div class="product-page__faq-item">
+                    <p class="product-page__faq-q">3. Where is this gem from?</p>
+                    <p class="product-page__faq-a">This is a{% if faq_variety != blank %} {{ faq_variety }}{% endif %} {{ faq_gem_type }}, originating from {{ faq_origin }}.{% if faq_cert_lab != blank %} Origin is stated on the {{ faq_cert_lab }} certificate.{% endif %}</p>
+                  </div>
+                {%- endif -%}
+
+                {%- comment -%} Q4 — Weight {%- endcomment -%}
+                {%- if faq_carats != 0 and faq_carats != blank -%}
+                  <div class="product-page__faq-item">
+                    <p class="product-page__faq-q">4. What is the weight of this gem?</p>
+                    <p class="product-page__faq-a">This {{ faq_gem_type }} weighs {{ faq_carats }} carats ({{ faq_carats_grams }} grams){% if faq_dimensions != blank %}, with dimensions of {{ faq_dimensions }} mm{% endif %}{% if faq_shape != blank %}, cut in a {{ faq_shape }} shape{% endif %}.</p>
+                  </div>
+                {%- endif -%}
+
+                {%- comment -%} Q5 — Astrological suitability (branches on exact treatment_status sheet values) {%- endcomment -%}
+                {%- assign faq_treatment_answer = '' -%}
+                {%- case faq_treatment_raw -%}
+                  {%- when 'No oil' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically suitable. A no oil emerald is considered the most structurally stable and no treatment has been done on the emerald.' -%}
+                  {%- when 'Insignificant Oil' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically suitable. Oiling of emeralds is a common trade practice.' -%}
+                  {%- when 'Minor oil' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically suitable. Oiling of emeralds is a common trade practice.' -%}
+                  {%- when 'Moderate oil' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically suitable. Oiling of emeralds is a common trade practice.' -%}
+                  {%- when 'Colourless Oiling Only' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically suitable. Oiling of emeralds is a common trade practice.' -%}
+                  {%- when 'Minor natural Resin' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically suitable. Columbian emeralds are generally treated with natural resin. The treatment is permanent and does not deteriorate over time. No artificial Polymers are used for this treatment.' -%}
+                  {%- when 'Unheated and Untreated – No indications of treatment observed' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically acceptable as no treatment of any sort has been done on this gem.' -%}
+                  {%- when 'Heated' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically acceptable. The treatment is permanent and does not deteriorate over time. However, please consult your astrologer once before purchase.' -%}
+                  {%- when 'Beryllium Treated' -%}
+                    {%- assign faq_treatment_answer = 'This gem is considered astrologically acceptable. The treatment is permanent and does not deteriorate over time. However, please consult your astrologer once before purchase.' -%}
+                  {%- when 'Diffusion Treated (Colour surface modification)' -%}
+                    {%- assign faq_treatment_answer = 'This gem is generally not considered astrologically suitable and more suited for jewellery purposes. However please consult your astrologer if you wish to buy this gem.' -%}
+                  {%- when 'Glass-Filled (Fracture-filled to improve clarity)' -%}
+                    {%- assign faq_treatment_answer = 'This gem is generally not considered astrologically suitable and more suited for jewellery purposes. However please consult your astrologer if you wish to buy this gem.' -%}
+                  {%- when 'Resin-Filled / Dyed' -%}
+                    {%- assign faq_treatment_answer = 'This gem is generally not considered astrologically suitable and more suited for jewellery purposes. However please consult your astrologer if you wish to buy this gem.' -%}
+                  {%- when 'Wax Filled' -%}
+                    {%- assign faq_treatment_answer = 'This gem is generally not considered astrologically suitable and more suited for jewellery purposes. However please consult your astrologer if you wish to buy this gem.' -%}
+                  {%- when 'Ethiopian Opals' -%}
+                    {%- assign faq_treatment_answer = 'This gem is generally not suitable for astrological purposes and more suited for jewellery purposes, as ethiopian opals lose their natural colour when exposed to water.' -%}
+                {%- endcase -%}
+                {%- if faq_treatment_answer != '' -%}
+                  <div class="product-page__faq-item">
+                    <p class="product-page__faq-q">5. Is this gem astrologically suitable?</p>
+                    <p class="product-page__faq-a">{{ faq_treatment_answer }}</p>
+                  </div>
+                {%- endif -%}
+
+              </div>
+            </div>
+            <button class="product-page__read-more-btn" data-read-more>Read More</button>
+          </div>
+
+          {%- if product.price > 100000000 -%}
+            <div class="product-page__tab-pane" id="tab-special">
+              <div class="product-page__tab-pane-inner">
+              {%- if product.metafields.custom.wow_factor != blank -%}
+                <h4 class="product-page__tab-heading">Why this gem is special</h4>
+                <div>{{ product.metafields.custom.wow_factor | newline_to_br }}</div>
+              {%- else -%}
+                <h4 class="product-page__tab-heading">Why this gem is special</h4>
+                <p>This premium gemstone is among the top 1% of its kind. Its exceptional saturation, rare origin, and master-grade cut make it a truly unique investment and a powerful spiritual tool.</p>
+              {%- endif -%}
+              </div>
+              <button class="product-page__read-more-btn" data-read-more>Read More</button>
+            </div>
+          {%- endif -%}
+        </div>
+
+        <!-- Customization Info Bar (Shown when customized) -->
+        <div id="customize-info-bar" class="product-page__customize-info" style="display:none;">
+          <div class="product-page__customize-info-header">
+            <span class="product-page__customize-info-label">Customization Selected</span>
+            <button class="product-page__reset-btn" onclick="CustomizeApp.reset()">RESET</button>
+          </div>
+          <div class="product-page__customize-info-details" id="customize-summary-text">
+            Ring / 14K Gold / Size 9 / Solitaire
+          </div>
+        </div>
+
+        <!-- Certification Option -->
+        <div class="product-page__certification-field">
+          <label class="product-page__certification-label" for="CertificationField-{{ section.id }}">
+            CERTIFICATION <span class="required-asterisk">*</span>
+          </label>
+          <div class="product-page__certification-select-wrapper">
+            <select id="CertificationField-{{ section.id }}" name="properties[Certification]" class="product-page__certification-select" onchange="updateCertFee(this)">
+              <option value="Free Lab Certificate" data-fee="0">Free Lab Certificate</option>
+              <option value="Lab Certificate - IIGJ (Extra 5 days)" data-fee="130000">Lab Certificate - IIGJ (Extra 5 days) +Rs. 1,300</option>
+              <option value="Lab Certificate - IIGJ Origin (Extra 5 days)" data-fee="280000">Lab Certificate - IIGJ Origin (Extra 5 days) +Rs. 2,800</option>
+              <option value="Lab Certificate - IGI (Extra 10 days)" data-fee="354000">Lab Certificate - IGI (Extra 10 days) +Rs. 3,540</option>
+            </select>
+            <svg class="product-page__select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <p class="product-page__cert-fee-note" id="cert-fee-note-{{ section.id }}" style="display:none;"></p>
+        </div>
+
+        <!-- CTA: default (two buttons side-by-side) -->
+        <div id="cta-default" class="product-page__dual-cta">
+          {%- if product.price > 100000000 -%}
+            <a href="mailto:{{ shop.email }}?subject=Price Request: {{ product.title | escape }}" class="product-page__btn-dark" style="width: 100%; text-decoration: none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              REQUEST PRICE
+            </a>
+          {%- else -%}
+            {%- form 'product', product -%}
+              <input type="hidden" name="id" value="{{ current_variant.id }}">
+              <input type="hidden" name="quantity" value="1">
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button
+                  type="submit"
+                  class="product-page__btn-outline"
+                  style="flex: 1;"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  ADD TO CART
+                </button>
+                <button type="button" class="product-page__btn-dark" onclick="CustomizeApp.open()" style="flex: 1;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  CUSTOMIZE
+                </button>
+              </div>
+              {% comment %} <button type="submit" name="checkout" class="product-page__btn-black" style="width: 100%; margin-top: 10px;" data-buy-now="true">BUY IT NOW</button> {% endcomment %}
+
+              {% if product.selected_or_first_available_variant.available %}
+                <div class="shopify-payment-button">
+                  <button type="button" id="flo-buy-now-button" onclick="handleFloBuyNowBtn(event)" class="shopify-payment-button__button shopify-payment-button__button--unbranded" style="width: 100%; margin-top: 10px;" name="flo-buy-now-button">
+                    {{ 'BUY IT NOW' }}
+                  </button>
+                </div>
+              {%- endif -%}
+ 
+            {%- endform -%}
+          {%- endif -%}
+        </div>
+
+        <!-- CTA: customize (single button, shown after customize click) -->
+        <div id="cta-customize" style="display:none;">
+          {%- form 'product', product -%}
+            <input type="hidden" name="id" value="{{ current_variant.id }}">
+            <input type="hidden" name="quantity" value="1">
+            <input type="hidden" name="properties[Jewelry Type]" value="Ring">
+            <input type="hidden" name="properties[Metal]" value="Rose Gold">
+            <input type="hidden" name="properties[Metal Purity]" value="14K">
+            <input type="hidden" name="properties[Ring Size]" value="Size 9; 49.0mm">
+            <input type="hidden" name="properties[Ring Style]" value="Solitaire">
+            <button
+              type="submit"
+              class="product-page__btn-dark product-page__btn-dark--full"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              ADD TO CART
+            </button>
+            {% comment %} <button type="submit" name="checkout" class="product-page__btn-black" style="width: 100%; margin-top: 10px;" data-buy-now="true">BUY IT NOW</button> {% endcomment %}
+
+            {% if product.selected_or_first_available_variant.available %}
+                <div class="shopify-payment-button">
+                  <button type="button" id="flo-buy-now-button" onclick="handleFloBuyNowBtn(event)" class="shopify-payment-button__button shopify-payment-button__button--unbranded flo-buy-now-btn" style="width: 100%; margin-top: 10px;" name="flo-buy-now-button">
+                    {{ 'BUY IT NOW' }}
+                  </button>
+                </div>
+            {%- endif -%}
+          {%- endform -%}
+        </div>
+
+        <!-- Dispatch info -->
+        {% comment %} <div class="product-page__dispatch">
+          <span>Estimated Dispatch Date: <strong>02 Sept, 2025</strong></span>
+          <span class="product-page__dispatch-sep">For Pincode: <strong>120010</strong></span>
+          <a href="#" class="product-page__pincode-link">| Change Pincode</a>
+        </div> {% endcomment %}
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Video Popup Overlay -->
+<div class="video-popup-overlay" id="video-popup-overlay" onclick="closeVideoPopup()">
+  <div class="video-popup" onclick="event.stopPropagation()">
+    <button class="video-popup__close" onclick="closeVideoPopup()" aria-label="Close video">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="video-popup__content" id="video-popup-content"></div>
+  </div>
+</div>
+
+<!-- Customization Modal Overlay -->
+{%- assign _modal_gem = product.metafields.custom.gem_type | default: product.type | handleize -%}
+<div class="customize-modal-overlay" id="customize-modal" onclick="CustomizeApp.close()">
+  <div class="customize-modal" onclick="event.stopPropagation()" data-product-gem="{{ _modal_gem }}">
+    <button class="customize-modal__close" onclick="CustomizeApp.close()" aria-label="Close customization">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+
+    <div class="customize-modal__header">
+      <h2 class="customize-modal__title">Customize Your Jewellery With This Gemstone.</h2>
+    </div>
+
+    <div class="customize-modal__body">
+      <!-- 1. Select Jewelry Type -->
+      <div class="customize-step">
+        <div class="customize-step__header">
+          <span class="customize-step__num">1.</span> SELECT FOR RING / PENDANT / BRACELET <span class="required-asterisk">*</span>
+          <button class="customize-step__reset" onclick="CustomizeApp.reset()">RESET</button>
+        </div>
+        <div class="customize-type-row">
+          <button class="customize-type-card" data-opt="type" data-val="Ring" onclick="CustomizeApp.set('type', 'Ring', this, 0)">
+            <div class="customize-type-card__icon">
+              <img src="{{ 'ring.svg' | asset_url }}" alt="Ring">
+            </div>
+            <span class="customize-type-card__label">Ring</span>
+          </button>
+          <button class="customize-type-card" data-opt="type" data-val="Pendant" onclick="CustomizeApp.set('type', 'Pendant', this, 0)">
+            <div class="customize-type-card__icon">
+              <img src="{{ 'pendant.svg' | asset_url }}" alt="Pendant">
+            </div>
+            <span class="customize-type-card__label">Pendant</span>
+          </button>
+          <button class="customize-type-card" data-opt="type" data-val="Bracelet" onclick="CustomizeApp.set('type', 'Bracelet', this, 0)">
+            <div class="customize-type-card__icon">
+              <img src="{{ 'bracelet.svg' | asset_url }}" alt="Bracelet">
+            </div>
+            <span class="customize-type-card__label">Bracelet</span>
+          </button>
+        </div>
+        <div class="customize-type-info" id="customize-type-info">
+          YOU HAVE SELECTED <span id="selected-type-text">RING</span> CLICK <button onclick="CustomizeApp.resetStep('type')" style="color:var(--color-gold); font-weight:bold; border:none; background:none; cursor:pointer;">HERE</button> TO CHANGE YOUR PREFERENCE. YOU CAN OPT TO HAVE YOUR GEMSTONE IN A RING, BRACELET OR A NECKLACE
+        </div>
+      </div>
+
+      <!-- 2. Select Metal -->
+      <div class="customize-step">
+        <div class="customize-step__header"><span class="customize-step__num">2.</span> METAL <span class="required-asterisk">*</span></div>
+        <div class="customize-metal-select-wrapper">
+          <select class="customize-metal-select" onchange="CustomizeApp.set('metal', this.value, this, this.options[this.selectedIndex].dataset.fee)">
+            <option value="Panchdhatu (Brass)" data-fee="0">Panchdhatu (Brass)</option>
+            <option value="Copper" data-fee="0">Copper</option>
+            <option value="Silver (925)" data-fee="50000">Silver (925) +Rs. 500</option>
+            <option value="Platinum" data-fee="800000">Platinum +Rs. 8,000</option>
+            <option value="White Gold" data-fee="1000000">White Gold +Rs. 10,000</option>
+            <option value="Gold (14K)" data-fee="1200000">Gold (14K) +Rs. 12,000</option>
+            <option value="Gold (18K)" data-fee="1800000">Gold (18K) +Rs. 18,000</option>
+          </select>
+          <svg class="product-page__select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+      </div>
+
+      <!-- 2b. Gender (for ring designs) -->
+      <div class="customize-step" id="customize-gender-step">
+        <div class="customize-step__header"><span class="customize-step__num">2b.</span> WEARING FOR</div>
+        <div class="customize-gender-toggle">
+          <button class="customize-gender-btn is-active" data-gender="female" onclick="CustomizeApp.setGender('female', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M12 12v8M9 17h6"/></svg>
+            Female
+          </button>
+          <button class="customize-gender-btn" data-gender="male" onclick="CustomizeApp.setGender('male', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="14" r="4"/><path d="M18 6l-5.5 5.5M18 6h-4M18 6v4"/></svg>
+            Male
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Select Design -->
+      <div class="customize-step">
+        <div class="customize-step__header">
+          <span class="customize-step__num">3.</span> DESIGNS <span class="required-asterisk">*</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" style="cursor:help;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="customize-design-grid" id="customize-design-grid-dynamic">
+          <!-- Populated dynamically by CustomizeApp.renderDesigns() -->
+        </div>
+        <p class="customize-design-empty" id="customize-design-empty" style="display:none;">No ring designs available for this combination.</p>
+      </div>
+    </div>
+
+    <div class="customize-modal__footer">
+      <button class="customize-modal__confirm" onclick="CustomizeApp.confirm()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        CONFIRM CUSTOMIZATION
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- You May Also Like -->
+{%- assign recommendation_count = 0 -%}
+{%- assign matched_ids = "|" -%}
+
+{%- comment -%} Determine target values for current product {%- endcomment -%}
+{%- assign target_price = product.price -%}
+{%- assign target_carats = product.metafields.custom.weight_carats | plus: 0.0 -%}
+{%- assign target_gem_type = product.metafields.custom.gem_type | default: product.type -%}
+
+{%- assign min_price = target_price | times: 0.8 -%}
+{%- assign max_price = target_price | times: 1.2 -%}
+{%- assign min_carat = target_carats | times: 0.8 -%}
+{%- assign max_carat = target_carats | times: 1.2 -%}
+
+{%- assign current_gem_type = product.metafields.custom.gem_type | default: product.type -%}
+{%- assign gem_collection_handle = current_gem_type | handleize -%}
+{%- assign rec_collection = collections[gem_collection_handle] | default: collections.all -%}
+
+{%- comment -%} PASS 1: Strict Match (Same Gem Type + Weight +/- 20% + Price +/- 20%) {%- endcomment -%}
+{%- capture rec_cards -%}
+  {%- for p in rec_collection.products -%}
+    {%- if p.id == product.id -%}{%- continue -%}{%- endif -%}
+    {%- assign p_price = p.price -%}
+    {%- assign p_carats = p.metafields.custom.weight_carats | plus: 0.0 -%}
+    {%- assign p_gem_type = p.metafields.custom.gem_type | default: p.type -%}
+
+    {%- if target_gem_type != blank and p_gem_type == target_gem_type -%}
+      {%- if p_price >= min_price and p_price <= max_price -%}
+        {%- if target_carats > 0 and p_carats >= min_carat and p_carats <= max_carat -%}
+          <div class="product-recs__card">
+            <a href="{{ p.url }}" class="product-recs__card-img">
+              {%- if p.featured_image -%}
+                <img src="{{ p.featured_image | image_url: width: 300 }}" alt="{{ p.title | escape }}" loading="lazy">
+              {%- else -%}
+                <div class="product-recs__card-placeholder">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </div>
+              {%- endif -%}
+            </a>
+            <div class="product-recs__card-info">
+              <h4 class="product-recs__card-name">{{ p.title }}</h4>
+              <p class="product-recs__card-price">Price: {{ p.price | money }}</p>
+            </div>
+            <a href="{{ p.url }}" class="product-recs__details-btn">VIEW DETAILS</a>
+          </div>
+          {%- assign recommendation_count = recommendation_count | plus: 1 -%}
+          {%- capture matched_ids -%}{{ matched_ids }}{{ p.id }}|{%- endcapture -%}
+          {%- if recommendation_count >= 5 -%}{%- break -%}{%- endif -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- comment -%} PASS 2: Secondary Match (Same Collection + Price +/- 20%) {%- endcomment -%}
+  {%- if recommendation_count == 0 -%}
+    {%- for p in rec_collection.products -%}
+      {%- if p.id == product.id -%}{%- continue -%}{%- endif -%}
+      {%- assign p_id_needle = "|" | append: p.id | append: "|" -%}
+      {%- if matched_ids contains p_id_needle -%}{%- continue -%}{%- endif -%}
+
+      {%- assign p_price = p.price -%}
+      {%- if p_price >= min_price and p_price <= max_price -%}
+        <div class="product-recs__card">
+          <a href="{{ p.url }}" class="product-recs__card-img">
+            {%- if p.featured_image -%}
+              <img src="{{ p.featured_image | image_url: width: 300 }}" alt="{{ p.title | escape }}" loading="lazy">
+            {%- else -%}
+              <div class="product-recs__card-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </div>
+            {%- endif -%}
+          </a>
+          <div class="product-recs__card-info">
+            <h4 class="product-recs__card-name">{{ p.title }}</h4>
+            <p class="product-recs__card-price">Price: {{ p.price | money }}</p>
+          </div>
+          <a href="{{ p.url }}" class="product-recs__details-btn">VIEW DETAILS</a>
+        </div>
+        {%- assign recommendation_count = recommendation_count | plus: 1 -%}
+        {%- capture matched_ids -%}{{ matched_ids }}{{ p.id }}|{%- endcapture -%}
+        {%- if recommendation_count >= 5 -%}{%- break -%}{%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- if recommendation_count > 0 -%}
+<section class="product-recs" id="product-recs">
+  <div class="page-width">
+    <h2 class="product-recs__title">You May Also Like</h2>
+    <div class="product-recs__header-row">
+      <span></span>
+      <a href="/collections/{{ gem_collection_handle | default: 'all' }}" class="product-recs__view-all">View All &rarr;</a>
+    </div>
+    <div class="product-recs__grid">
+      {{ rec_cards }}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+<!-- Buying Process (above footer) -->
+<section class="pdp-buying-process" id="pdp-buying-process">
+  <div class="page-width">
+    <h2 class="pdp-bp__heading">Easy Buying Process</h2>
+    <p class="pdp-bp__subheading">Discover semi-precious gemstones that bring similar planetary benefits</p>
+
+    <div class="pdp-bp__grid">
+      <!-- Step 1 -->
+      <div class="pdp-bp__item">
+        <div class="pdp-bp__icon-wrap">
+          <div class="pdp-bp__icon">
+            <img
+              src="{{ 'bp-browse.svg' | asset_url }}"
+              alt="Browse Collection"
+              class="pdp-bp__icon-img"
+              loading="lazy"
+            >
+          </div>
+          <div class="pdp-bp__number">1</div>
+        </div>
+        <h3 class="pdp-bp__step-title">BROWSE COLLECTION</h3>
+        <p class="pdp-bp__step-desc">Find your perfect gemstone by gem type or planet type.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="pdp-bp__item">
+        <div class="pdp-bp__icon-wrap">
+          <div class="pdp-bp__icon">
+            <img
+              src="{{ 'bp-choose.svg' | asset_url }}"
+              alt="Browse Collection"
+              class="pdp-bp__icon-img"
+              loading="lazy"
+            >
+          </div>
+          <div class="pdp-bp__number">2</div>
+        </div>
+        <h3 class="pdp-bp__step-title">CHOOSE A DESIGN</h3>
+        <p class="pdp-bp__step-desc">Select from over 100 designs available in our design bank.</p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="pdp-bp__item">
+        <div class="pdp-bp__icon-wrap">
+          <div class="pdp-bp__icon">
+            <img
+              src="{{ 'bp-consult.svg' | asset_url }}"
+              alt="Browse Collection"
+              class="pdp-bp__icon-img"
+              loading="lazy"
+            >
+          </div>
+          <div class="pdp-bp__number">3</div>
+        </div>
+        <h3 class="pdp-bp__step-title">CONSULT CONCIERGE</h3>
+        <p class="pdp-bp__step-desc">Get personalized options, perspective, help, and information from our experts.</p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="pdp-bp__item">
+        <div class="pdp-bp__icon-wrap">
+          <div class="pdp-bp__icon">
+            <img
+              src="{{ 'bp-checkout.svg' | asset_url }}"
+              alt="Browse Collection"
+              class="pdp-bp__icon-img"
+              loading="lazy"
+            >
+          </div>
+          <div class="pdp-bp__number">4</div>
+        </div>
+        <h3 class="pdp-bp__step-title">CHECKOUT</h3>
+        <p class="pdp-bp__step-desc">Choose from various convenient payment options, including UPI, card, and EMI/COD.</p>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="pdp-bp__item">
+        <div class="pdp-bp__icon-wrap">
+          <div class="pdp-bp__icon">
+            <img src="{{ 'feature-shipping.svg' | asset_url }}" alt="Receive Gemstone" loading="lazy" style="width:100%;height:100%;object-fit:contain;">
+          </div>
+          <div class="pdp-bp__number">5</div>
+        </div>
+        <h3 class="pdp-bp__step-title">RECEIVE GEMSTONE</h3>
+        <p class="pdp-bp__step-desc">We deliver to over 19,000 PIN codes across India and to over 180 countries globally.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Breadcrumb */
+  .product-breadcrumb {
+    background: var(--color-bg, #faf8f4);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border-light, #eee);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 11px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    color: #888;
+  }
+
+  .breadcrumb a {
+    color: #888;
+    text-decoration: none;
+  }
+
+  .breadcrumb a:hover { color: var(--color-primary, #1a2a3a); }
+  .breadcrumb__sep { color: #bbb; }
+
+  .breadcrumb--pdp {
+    margin-bottom: 20px;
+  }
+
+  /* Page wrapper */
+  .product-page { padding: var(--space-2xl, 40px) 0 var(--space-4xl, 80px); }
+
+  @media (max-width: 768px) {
+    .product-page { padding: var(--space-xl, 24px) 16px var(--space-3xl, 60px); }
+  }
+
+  .product-page__wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  /* Gallery */
+  .product-page__gallery {
+    display: grid;
+    grid-template-columns: 70px 36px 1fr;
+    gap: 12px;
+    padding-right: 32px;
+    width: 100%;
+  }
+
+  /* Thumbnail strip */
+  .product-page__thumbstrip {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 580px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .product-page__thumbstrip::-webkit-scrollbar { display: none; }
+
+  .product-page__thumb {
+    width: 65px;
+    height: 65px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0;
+    background: var(--color-cream, #f5f0e8);
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+  .product-page__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .product-page__thumb--active,
+  .product-page__thumb:hover {
+    border-color: var(--color-gold, #b8963e);
+  }
+
+  /* Main image */
+  .product-page__main-img-wrap {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .product-page__main-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+  }
+
+  .product-page__media-item {
+    position: relative;
+  }
+
+  .product-page__wrapper {
+    position: relative;
+  }
+
+  /* Zoom CSS commented out */
+
+  .product-page__img-placeholder {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-cream, #f5f0e8);
+  }
+
+  /* Cert logos overlay */
+  .product-page__cert-logos {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .product-page__cert-logo {
+    max-height: 52px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  @media (max-width: 768px) {
+    .product-page__cert-logo { max-height: 36px; }
+  }
+
+  /* Image action icons */
+  .product-page__img-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    padding-top: 8px;
+  }
+
+  .product-page__img-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #444;
+    transition: background 0.2s;
+  }
+  .product-page__img-action-btn:hover { background: #fff; }
+
+  /* Info panel */
+  .product-page__info {
+    padding-top: 4px;
+    padding-left: 32px;
+    width: 100%;
+  }
+
+  .product-page__vendor {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-gold, #b8963e);
+    margin-bottom: 6px;
+  }
+
+  .product-page__title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  .product-page__title {
+    font-family: var(--font-heading, 'Cormorant Garamond', serif);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.2;
+    margin: 0;
+    color: var(--color-primary, #1a2a3a);
+  }
+
+  /* Badges */
+  .product-page__badge-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .product-page__shipping-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #555;
+  }
+
+  /* Meta row */
+  .product-page__meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    color: #555;
+    margin-bottom: 14px;
+  }
+  .product-page__meta-sep { color: #bbb; }
+  .product-page__reviews-inline { display: flex; align-items: center; gap: 4px; }
+  .product-page__stars { color: #f1c40f; letter-spacing: 1px; font-size: 13px; }
+
+  /* Divider */
+  .product-page__divider {
+    height: 1px;
+    background: var(--color-border-light, #eee);
+    margin: 14px 0;
+  }
+
+  /* Price */
+  .product-page__price-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .product-page__price {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-primary, #1a2a3a);
+    font-family: var(--font-accent);
+  }
+
+  .product-page__compare-price {
+    font-size: 15px;
+    color: #aaa;
+    text-decoration: line-through;
+  }
+
+  .product-page__price-note {
+    font-size: 11px;
+    color: #888;
+  }
+
+  .product-page__price-update-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-gold, #b8963e);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Tabs */
+  .product-page__tabs { margin-bottom: 18px; }
+
+  .product-page__tab-nav {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 14px;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .product-page__tab-nav::-webkit-scrollbar { display: none; }
+
+  .product-page__tab-btn {
+    flex: 0 0 auto;
+    min-width: 155px;
+    white-space: nowrap;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 500;
+    color: #777;
+    background: none;
+    border: 1px solid #e0e0e0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+    text-align: center;
+  }
+  .product-page__tab-btn:hover { color: var(--color-primary, #1a2a3a); }
+  .product-page__tab-btn--active {
+    color: var(--color-primary, #1a2a3a);
+    border-bottom-color: var(--color-primary, #1a2a3a);
+    font-weight: 600;
+  }
+
+  .product-page__tab-pane {
+    display: none;
+    font-size: 13px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    color: #555;
+    line-height: 1.7;
+    padding: 16px 0;
+    position: relative;
+  }
+  .product-page__tab-pane--active { display: block; }
+
+  /* FAQ tab */
+  .product-page__faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 6px;
+  }
+  .product-page__faq-item {
+    border-bottom: 1px solid #ececec;
+    padding-bottom: 12px;
+  }
+  .product-page__faq-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .product-page__faq-q {
+    font-weight: 600;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0 0 6px;
+    font-size: 13px;
+  }
+  .product-page__faq-a {
+    margin: 0;
+    color: #555;
+    line-height: 1.55;
+    font-size: 13px;
+  }
+
+  .product-page__tab-pane-inner {
+    max-height: 280px;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    position: relative;
+  }
+  .product-page__tab-pane-inner.is-expanded {
+    max-height: none;
+  }
+  .product-page__tab-pane-inner:not(.is-expanded).has-overflow::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1));
+    pointer-events: none;
+  }
+  .product-page__read-more-btn {
+    display: none;
+    margin-top: 8px;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    color: var(--color-primary, #1a2a3a);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .product-page__read-more-btn.is-visible {
+    display: inline-block;
+  }
+  .product-page__read-more-btn:hover {
+    text-decoration: underline;
+  }
+
+  .product-page__tab-heading {
+    font-family: var(--font-heading, 'Cormorant Garamond', serif);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0 0 10px;
+  }
+
+  .product-page__tab-list {
+    margin: 6px 0 0 16px;
+    padding: 0;
+    list-style: disc;
+  }
+  .product-page__tab-list li {
+    margin-bottom: 3px;
+    font-size: 13px;
+  }
+
+  .product-page__read-more {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-primary, #1a2a3a);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .product-page__read-more:hover { color: var(--color-gold, #b8963e); }
+
+  /* Customization panel */
+  .product-page__customize-panel {
+    background: var(--color-cream, #f5f0e8);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+
+  .product-page__customize-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .product-page__customize-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-primary, #1a2a3a);
+    letter-spacing: 0.02em;
+  }
+
+  .product-page__reset-btn {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-gold, #b8963e);
+    background: none;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+  }
+
+  .product-page__customize-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .product-page__customize-cell {
+    background: #fff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+  }
+  .product-page__customize-cell--wide { grid-column: 1 / -1; }
+
+  .product-page__customize-cell label {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .product-page__customize-val {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary, #1a2a3a);
+  }
+
+  .product-page__metal-swatch {
+    width: 20px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .product-page__metal-swatch--rose {
+    background: linear-gradient(135deg, #e8c4a0, #c9956c);
+  }
+
+  .product-page__style-swatch {
+    width: 20px;
+    height: 20px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+    flex-shrink: 0;
+  }
+
+  /* CTA buttons */
+  .product-page__dual-cta {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .product-page__dual-cta form {
+    flex: 1;
+  }
+
+  /* Style the unbranded Shopify Buy It Now button to match the theme */
+  .product-page__dual-cta .shopify-payment-button__button--unbranded {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-family: var(--font-body, 'Inter', sans-serif) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    padding: 14px 20px !important;
+    line-height: normal !important;
+    min-height: 48px !important;
+    transition: all 0.2s !important;
+  }
+  .product-page__dual-cta .shopify-payment-button__button--unbranded:hover {
+    background-color: #222222 !important;
+  }
+  .product-page__dual-cta .shopify-payment-button__button--hidden {
+    display: none !important;
+  }
+
+  .product-page__btn-outline {
+    width: 100%;
+    padding: 14px 20px;
+    border: 1.5px solid var(--color-primary, #1a2a3a);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: #fff;
+    color: var(--color-primary, #1a2a3a);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+  .product-page__btn-outline:hover {
+    background: var(--color-primary, #1a2a3a);
+    color: #fff;
+  }
+
+  .product-page__btn-dark {
+    flex: 1;
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--color-primary, #1a2a3a);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+  }
+  .product-page__btn-dark:hover { background: #2c4a3e; }
+  .product-page__btn-dark--full { margin-top: 0; }
+
+  .product-page__btn-black {
+    flex: 1;
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: #000000;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+  }
+  .product-page__btn-black:hover { background: #222222; }
+
+  /* Dispatch */
+  .product-page__dispatch {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11px;
+    color: #555;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border-light, #eee);
+  }
+  .product-page__dispatch strong { color: var(--color-primary, #1a2a3a); }
+  .product-page__dispatch-sep { color: #bbb; }
+  .product-page__pincode-link {
+    color: var(--color-gold, #b8963e);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .product-page__pincode-link:hover { text-decoration: underline; }
+
+  /* ====================== */
+  /* You May Also Like       */
+  /* ====================== */
+  .product-recs {
+    background: var(--color-bg, #faf8f4);
+    padding: var(--space-3xl, 60px) 0 var(--space-4xl, 80px);
+    position: relative;
+  }
+
+  .product-recs__title {
+    font-family: var(--font-heading, 'Cormorant Garamond', serif);
+    font-size: 32px;
+    font-weight: 600;
+    font-style: italic;
+    text-align: center;
+    color: var(--color-primary, #1a2a3a);
+    margin-bottom: 8px;
+  }
+
+  .product-recs__header-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .product-recs__view-all {
+    font-size: 13px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    color: var(--color-primary, #1a2a3a);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 500;
+  }
+  .product-recs__view-all:hover { color: var(--color-gold, #b8963e); }
+
+  .product-recs__grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  @media (max-width: 1024px) {
+    .product-recs__grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  @media (max-width: 768px) {
+    .product-recs__grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  }
+
+  @media (max-width: 480px) {
+    .product-recs__grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+
+  .product-recs__card {
+    min-width: 0;
+  }
+
+  .product-recs__card-img {
+    display: block;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    overflow: hidden;
+    aspect-ratio: 1;
+    width: 100%;
+  }
+
+  .product-recs__card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .product-recs__card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f0e8;
+  }
+
+  .product-recs__card-info {
+    padding: 10px 4px 6px;
+  }
+
+  .product-recs__card-name {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0 0 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .product-recs__card-price {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0;
+  }
+
+  .product-recs__details-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-primary, #1a2a3a);
+    text-decoration: none;
+    background: #fff;
+    transition: all 0.2s;
+    box-sizing: border-box;
+  }
+  .product-recs__details-btn:hover {
+    background: var(--color-primary, #1a2a3a);
+    color: #fff;
+    border-color: var(--color-primary, #1a2a3a);
+  }
+
+  /* ======================== */
+  /* Buying Process (PDP)     */
+  /* ======================== */
+  .pdp-buying-process {
+    background: #d8c3ad;
+    text-align: center;
+    padding: var(--space-3xl, 60px) 0 var(--space-4xl, 80px);
+  }
+
+  .pdp-bp__heading {
+    font-family: var(--font-heading, 'Cormorant Garamond', serif);
+    font-size: 36px;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0 0 8px;
+  }
+
+  .pdp-bp__subheading {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 14px;
+    color: #555;
+    margin: 0 0 var(--space-3xl, 48px);
+  }
+
+  .pdp-bp__grid {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md, 16px);
+    flex-wrap: wrap;
+  }
+
+  .pdp-bp__item {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pdp-bp__icon-wrap {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-lg, 20px);
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+  }
+
+  .pdp-bp__icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pdp-bp__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .pdp-bp__number {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 24px;
+    height: 24px;
+    background: #2d4a3e;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    border: 2px solid #d8c3ad;
+  }
+
+  .pdp-bp__step-title {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 0 0 var(--space-sm, 8px);
+    color: var(--color-primary, #1a2a3a);
+  }
+
+  .pdp-bp__step-desc {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 12px;
+    color: #555;
+    line-height: 1.5;
+    max-width: 200px;
+    margin: 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 992px) {
+    .product-page__wrapper { grid-template-columns: 1fr; gap: var(--space-2xl, 40px); }
+    .product-page__gallery, .product-page__info { padding-left: 0; padding-right: 0; }
+  }
+
+  @media (max-width: 768px) {
+
+    /* 6. No horizontal scroll */
+    .product-page__wrapper {
+      overflow: hidden;
+    }
+
+    /* 1. Gallery — stack vertically, full width */
+    .product-page__gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    /* 1. Main image — consistent height, centered, aspect-ratio preserved */
+    .product-page__main-img-wrap {
+      order: 1;
+      width: 100%;
+      height: 420px;
+      border-radius: 8px;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .product-page__main-img-wrap .product-page__main-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* Hide desktop action icons on mobile */
+    .product-page__img-actions {
+      display: none;
+    }
+
+    /* 2. Thumbnail strip — horizontal scroll, no clipping */
+    .product-page__thumbstrip {
+      order: 3;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      max-height: none;
+      padding: 4px 0 10px;
+      justify-content: flex-start;
+      gap: 8px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .product-page__thumbstrip::-webkit-scrollbar { display: none; }
+
+    .product-page__thumb {
+      width: 64px;
+      height: 64px;
+      min-width: 64px;
+      flex-shrink: 0;
+    }
+
+    /* Info section */
+    .product-page__title-row {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .product-page__title {
+      font-size: 22px;
+    }
+
+    .product-page__badge-row {
+      flex-shrink: 1;
+    }
+
+    /* 4. Breadcrumb — wrap gracefully */
+    .breadcrumb--pdp {
+      max-width: 100%;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .breadcrumb {
+      flex-wrap: wrap;
+    }
+    .breadcrumb a,
+    .breadcrumb span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 40vw;
+    }
+
+    .product-page__meta-row {
+      flex-wrap: wrap;
+      font-size: 11px;
+    }
+
+    .product-page__price {
+      font-size: 22px;
+    }
+
+    /* 5. CTA buttons — full-width, stacked, 48px min tap height */
+    .product-page__dual-cta {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .product-page__dual-cta form {
+      width: 100%;
+      flex: none;
+    }
+    .product-page__btn-outline,
+    .product-page__btn-dark {
+      min-height: 48px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Specs grid — prevent text truncation on mobile */
+    .product-page__specs-grid {
+      gap: 8px;
+    }
+    .product-page__spec-value {
+      font-size: 12px;
+    }
+
+    /* Info section — prevent overflow */
+    .product-page__info {
+      max-width: 100%;
+      overflow: hidden;
+    }
+  }
+
+  /* 3. Specs grid — 1 column below 480px */
+  @media (max-width: 480px) {
+    .product-page__specs-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    .product-page__spec-item {
+      padding: 10px 14px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .pdp-bp__grid {
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-2xl, 32px);
+    }
+    .pdp-bp__heading { font-size: 28px; }
+  }
+
+  .product-page__description {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 20px;
+  }
+
+  /* Specs Grid in About Tab */
+  .product-page__specs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .product-page__spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 16px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .product-page__spec-item--full {
+    grid-column: 1 / -1;
+  }
+
+  .product-page__spec-item--inline {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .product-page__spec-item--inline .product-page__spec-label {
+    flex: 0 0 auto;
+  }
+  .product-page__spec-item--inline .product-page__spec-value {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .product-page__spec-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #999;
+  }
+
+  .product-page__spec-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary, #1a2a3a);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Taglines in About Tab */
+  .product-page__taglines {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px dashed #ddd;
+  }
+  .product-page__tagline-en {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1a1a1a;
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+  .product-page__tagline-hi {
+    font-size: 18px;
+    color: #444;
+    line-height: 1.5;
+  }
+
+  /* Know Your Gem Specs Table */
+  .product-page__specs-table {
+    margin-top: 16px;
+    border-top: 1px solid #eee;
+  }
+  .product-page__specs-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    padding: 14px 0;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+  }
+  .product-page__specs-label {
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 13px;
+  }
+  .product-page__specs-val {
+    color: #444;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Treatment Table */
+  .product-page__treatment-table {
+    margin-top: 16px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .product-page__treatment-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+  }
+  .product-page__treatment-row:last-child { border-bottom: none; }
+  .product-page__treatment-label {
+    font-size: 13px;
+    color: #444;
+  }
+  .product-page__treatment-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 13px;
+  }
+  .product-page__treatment-icon {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    background: #cc0000;
+    color: #fff;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: bold;
+    transform: scale(1.1);
+  }
+
+  /* Certification Summary */
+  .product-page__cert-summary {
+    margin-top: 24px;
+    padding: 20px;
+    background: #fcfcfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+  }
+  .product-page__cert-field {
+    margin-bottom: 12px;
+  }
+  .product-page__cert-label {
+    display: block;
+    font-size: 11px;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .product-page__cert-val {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+  .product-page__cert-verify {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #2d4a3e;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .product-page__thumb-video-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    color: #000;
+  }
+  .product-page__thumb-video-icon svg { width: 12px; height: 12px; }
+  .product-page__thumb { position: relative; }
+  .product-page__video { width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; }
+
+  /* Video preview with play button overlay */
+  .product-page__video-preview {
+    position: relative;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .product-page__video-play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px;
+    height: 72px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    z-index: 5;
+  }
+
+  .product-page__video-play-btn svg {
+    margin-left: 4px;
+  }
+
+  .product-page__video-preview:hover .product-page__video-play-btn {
+    background: rgba(0, 0, 0, 0.75);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  /* Video Popup Modal */
+  .video-popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-popup-overlay.is-open {
+    display: flex;
+  }
+
+  .video-popup {
+    position: relative;
+    width: 90vw;
+    max-width: 900px;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .video-popup__close {
+    position: absolute;
+    top: -44px;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+  }
+
+  .video-popup__close:hover {
+    background: rgba(255,255,255,0.3);
+  }
+
+  .video-popup__content {
+    width: 100%;
+    height: 100%;
+  }
+
+  .video-popup__content video,
+  .video-popup__content iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  /* ======================== */
+  /* Customization Modal      */
+  /* ======================== */
+  .customize-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .customize-modal-overlay.is-active { display: flex; }
+
+  .customize-modal {
+    background: #fff;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+
+  .customize-modal__close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  .customize-modal__header {
+    padding: 24px 32px 14px;
+    border-bottom: 1px solid #efefef;
+  }
+
+  .customize-modal__title {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #1a1a1a;
+  }
+
+  .customize-modal__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+  }
+
+  .customize-step {
+    margin-bottom: 32px;
+  }
+
+  .customize-step__header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .customize-step__num {
+    color: #2d4a3e;
+    margin-right: 4px;
+  }
+
+  .customize-step__reset {
+    font-size: 10px;
+    font-weight: 700;
+    color: #4a6fa5;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .customize-step__link {
+    font-size: 10px;
+    font-weight: 600;
+    color: #4a6fa5;
+    text-decoration: underline;
+  }
+
+  /* Cards Grid */
+  .customize-options--grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .customize-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    width: 100%;
+  }
+
+  .customize-card:hover { border-color: #2d4a3e; }
+  .customize-card.is-active {
+    border-color: #2d4a3e;
+    background: #f8faf9;
+    border-width: 2px;
+  }
+
+  .customize-card__icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    color: #2d4a3e;
+  }
+
+  .customize-card__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .customize-card__check {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    background: #2d4a3e;
+    color: #fff;
+    border-radius: 4px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+  .customize-card.is-active .customize-card__check { display: flex; }
+
+  /* Pills */
+  .customize-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .customize-pill {
+    padding: 7px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #f9f9f9;
+    font-size: 12px;
+    font-weight: 500;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #e0e0e0;
+  }
+
+  .customize-pill:hover { background: #eee; }
+  .customize-pill.is-active {
+    background: #2d4a3e;
+    color: #fff;
+    border-color: #2d4a3e;
+  }
+
+  .customize-pill--large {
+    padding: 8px 12px;
+    min-width: 110px;
+    text-align: left;
+  }
+
+  .customize-pill small {
+    display: block;
+    font-size: 9px;
+    opacity: 0.8;
+    margin-top: 1px;
+  }
+
+  /* Style Scroller */
+  .customize-styles-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+
+  .customize-style-card {
+    flex: 0 0 110px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  .customize-style-card:hover { border-color: #2d4a3e; }
+  .customize-style-card.is-active {
+    border-color: #2d4a3e;
+    background: #f8faf9;
+    border-width: 2px;
+  }
+
+  .customize-style-card__img {
+    aspect-ratio: 1;
+    background: #f0f0f0;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .customize-style-card__img img { width: 100%; height: 100%; object-fit: cover; }
+
+  .customize-style-card__label {
+    font-size: 11px;
+    text-align: center;
+    display: block;
+    color: #333;
+  }
+  .customize-style-card.is-active .customize-card__check { display: flex; }
+
+  /* Gender toggle */
+  .customize-gender-toggle {
+    display: inline-flex;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .customize-gender-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    background: #f9f9f9;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.03em;
+  }
+  .customize-gender-btn + .customize-gender-btn { border-left: 1px solid #e0e0e0; }
+  .customize-gender-btn.is-active { background: #2d4a3e; color: #fff; }
+  .customize-gender-btn:not(.is-active):hover { background: #f0f0f0; color: #333; }
+
+  /* Design cards grid */
+  .customize-design-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .customize-design-card {
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .customize-design-card:hover { border-color: #2d4a3e; }
+  .customize-design-card.is-active { border-color: #2d4a3e; border-width: 2px; background: #f8faf9; }
+  .customize-design-card__img {
+    aspect-ratio: 1;
+    background: #f7f7f7;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .customize-design-card__img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .customize-design-card__label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    padding: 6px 4px 2px;
+  }
+  .customize-design-card__fee {
+    font-size: 10px;
+    color: var(--color-gold, #c9a96e);
+    font-weight: 600;
+    padding-bottom: 8px;
+  }
+  .customize-design-empty {
+    font-size: 12px;
+    color: #999;
+    font-style: italic;
+    padding: 12px 0;
+  }
+
+  /* Footer */
+  .customize-modal__footer {
+    padding: 0;
+  }
+
+  .customize-modal__confirm {
+    width: 100%;
+    background: #2d4a3e;
+    color: #fff;
+    border: none;
+    padding: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .customize-modal__confirm:hover { background: #1f352c; }
+
+  /* Summary Bar in Page */
+  .product-page__customize-info {
+    background: #f8faf9;
+    border: 1px solid #d1dbd6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: var(--space-lg, 20px);
+  }
+
+  .product-page__customize-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .product-page__customize-info-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #2d4a3e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .product-page__customize-info-details {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  @media (max-width: 768px) {
+    .video-popup {
+      width: 95vw;
+      border-radius: 8px;
+    }
+    .video-popup__close {
+      top: -40px;
+    }
+    .product-page__video-play-btn {
+      width: 56px;
+      height: 56px;
+    }
+    .product-page__video-play-btn svg {
+      width: 36px;
+      height: 36px;
+    }
+  }
+  .product-recs__none {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 0;
+    color: #666;
+    font-size: 14px;
+    font-family: var(--font-body);
+    background: #fdfaf5;
+    border-radius: 8px;
+    margin-top: 20px;
+  }
+</style>
+
+<script>
+  function setMainMedia(mediaId, btn) {
+    document.querySelectorAll('.product-page__media-item').forEach(item => {
+      item.style.display = 'none';
+      item.classList.remove('is-active');
+    });
+
+    const selectedMedia = document.querySelector(`.product-page__media-item[data-media-id="${mediaId}"]`);
+    if (selectedMedia) {
+      selectedMedia.style.display = 'block';
+      selectedMedia.classList.add('is-active');
+    }
+    document.querySelectorAll('.product-page__thumb').forEach(t => t.classList.remove('product-page__thumb--active'));
+    btn.classList.add('product-page__thumb--active');
+  }
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.product-page__tab-pane').forEach(p => p.classList.remove('product-page__tab-pane--active'));
+    document.querySelectorAll('.product-page__tab-btn').forEach(b => b.classList.remove('product-page__tab-btn--active'));
+    const pane = document.getElementById('tab-' + tabId);
+    if (pane) pane.classList.add('product-page__tab-pane--active');
+    btn.classList.add('product-page__tab-btn--active');
+    // Wait for browser to paint before measuring overflow
+    if (pane) requestAnimationFrame(function() { initTabReadMore(pane); });
+  }
+
+  /* Read More / Read Less for tab panes */
+  function initTabReadMore(pane) {
+    const inner = pane.querySelector('.product-page__tab-pane-inner');
+    const btn = pane.querySelector('[data-read-more]');
+    if (!inner || !btn) return;
+    // Check if content overflows the max-height
+    const maxH = 280;
+    if (inner.scrollHeight > maxH + 10) {
+      inner.classList.add('has-overflow');
+      btn.classList.add('is-visible');
+      if (!inner.classList.contains('is-expanded')) {
+        btn.textContent = 'Read More';
+      }
+    } else {
+      inner.classList.remove('has-overflow');
+      btn.classList.remove('is-visible');
+    }
+  }
+
+  function initAllReadMore() {
+    // Init read-more for the active tab pane
+    document.querySelectorAll('.product-page__tab-pane--active').forEach(function(pane) {
+      initTabReadMore(pane);
+    });
+
+    // Toggle read more / read less
+    document.querySelectorAll('[data-read-more]').forEach(function(btn) {
+      if (btn._readMoreBound) return;
+      btn._readMoreBound = true;
+      btn.addEventListener('click', function() {
+        const pane = btn.closest('.product-page__tab-pane');
+        const inner = pane ? pane.querySelector('.product-page__tab-pane-inner') : null;
+        if (!inner) return;
+        const isExpanded = inner.classList.toggle('is-expanded');
+        btn.textContent = isExpanded ? 'Read Less' : 'Read More';
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAllReadMore);
+  } else {
+    initAllReadMore();
+  }
+
+  function updateCertFee(select) {
+    const option = select.options[select.selectedIndex];
+    const feeInPaise = parseInt(option.getAttribute('data-fee')) || 0;
+    const note = document.getElementById('cert-fee-note-{{ section.id }}');
+    
+    if (feeInPaise > 0) {
+      const feeFormatted = (feeInPaise / 100).toLocaleString('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0
+      });
+      note.textContent = `+ ${feeFormatted} Certification Fee`;
+      note.style.display = 'block';
+    } else {
+      note.style.display = 'none';
+      note.textContent = '';
+    }
+    
+    // Update global state for price calculation
+    CustomizeApp.state.certFee = feeInPaise;
+    CustomizeApp.updateTotalPrice();
+  }
+
+  // Intercept Add to Cart to include Certification properties and parallel items
+  document.addEventListener('DOMContentLoaded', function() {
+    const productForms = document.querySelectorAll('form[action^="/cart/add"]');
+    
+    productForms.forEach(form => {
+      form.addEventListener('submit', function(e) {
+        const certSelect = document.getElementById('CertificationField-{{ section.id }}');
+        const certVal = certSelect ? certSelect.value : 'None';
+        
+        // Parallel Add Logic
+        if (e.cancelable) e.preventDefault();
+        const itemsToCart = [];
+        
+        // 1. Gemstone Product
+        const variantIdInput = form.querySelector('[name="id"]');
+        if (!variantIdInput) return;
+
+        itemsToCart.push({
+          id: variantIdInput.value,
+          quantity: 1,
+          properties: {
+            {% if product.metafields.custom.weight_carats != blank %}
+            'Weight': '{{ product.metafields.custom.weight_carats | escape }} Carat',
+            {% elsif product.metafields.custom.weight_ratti != blank %}
+            'Weight (Ratti)': '{{ product.metafields.custom.weight_ratti | times: 1.0 | round: 2 | escape }} Ratti',
+            {% endif %}
+            'Origin': '{{ product.metafields.custom.origin | default: "Ceylon / Sri Lanka" | escape }}',
+            'Gem Type': '{{ product.metafields.custom.gem_type | default: product.type | escape }}',
+            'Certification': certVal,
+            '_certification_lab': '{{ product.metafields.custom.cert_lab | escape }}',
+            'Shape / Cut': '{{ product.metafields.custom.shape_cut | escape }}',
+            'Treatment': '{{ product.metafields.custom.treatment_status | escape }}',
+            'Jewelry Type': CustomizeApp.state.type || 'None',
+            'Metal': CustomizeApp.state.metal || 'None',
+            'Style': CustomizeApp.state.style || 'None',
+            '_customization_fee_raw': CustomizeApp.state.certFee + CustomizeApp.state.metalFee + CustomizeApp.state.styleFee,
+            '_master_id': Date.now()
+          }
+        });
+
+        // Check if "Buy It Now" was clicked
+        const isBuyNow = e.submitter && (e.submitter.hasAttribute('data-buy-now') || e.submitter.name === 'checkout');
+
+        fetch('/cart/add.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: itemsToCart })
+        })
+        .then(res => res.json())
+        .then(() => {
+          const btn = form.querySelector('button[type="submit"]:not([data-buy-now])');
+          if (btn && !isBuyNow) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✓ ADDED TO CART';
+            btn.style.backgroundColor = '#27ae60';
+            setTimeout(() => {
+              btn.innerHTML = originalText;
+              btn.style.backgroundColor = '';
+              window.location.href = '/cart';
+            }, 1000);
+          } else {
+            window.location.href = isBuyNow ? '/checkout' : '/cart';
+          }
+        })
+        .catch(err => {
+          console.error("Cart Error:", err);
+          form.submit();
+        });
+      });
+    });
+  });
+
+  // ── Ring design image map ──────────────────────────────────────────
+  const RING_DESIGN_MAP = {
+    female: {
+      'blue-sapphire': {
+        panchdhatu: ['01'], silver: ['01'], gold: ['01'], platinum: ['01'], copper: ['01'], 'white-gold': ['01']
+      },
+      emerald: {
+        panchdhatu: ['06','07','08'], silver: ['06','07','08'], gold: ['06','07','08'],
+        platinum: ['06','07','08'], copper: ['06','07','08'], 'white-gold': ['06','07','08']
+      },
+      ruby: {}, 'yellow-sapphire': {}
+    },
+    male: {
+      'blue-sapphire': {
+        panchdhatu: ['02','03'], silver: ['02','03'], gold: ['02','03'],
+        platinum: ['02','03'], copper: ['02','03'], 'white-gold': ['02','03']
+      },
+      emerald: {
+        panchdhatu: ['04','05','07','08'], gold: ['04','05','07','08'],
+        silver: ['05','07','08'], platinum: ['05','07','08'],
+        copper: ['05','08'], 'white-gold': ['05','07','08']
+      },
+      ruby: {
+        panchdhatu: ['09'], silver: ['09'], gold: ['09'],
+        platinum: ['09'], copper: ['09'], 'white-gold': ['09']
+      },
+      'yellow-sapphire': {
+        panchdhatu: ['010'], silver: ['010'], gold: ['010'],
+        platinum: ['010'], copper: ['010'], 'white-gold': ['010']
+      }
+    }
+  };
+
+  // Primary thumbnail view per ring (gender-specific where needed)
+  const RING_PRIMARY_VIEW = {
+    '01': 'a', '02': 'a', '03': 'a', '04': 'a', '05': 'a',
+    '06': 'a', '07': { female: 'b', male: 'a' }, '08': { female: 'a', male: 'b' },
+    '09': 'a', '010': 'a'
+  };
+
+  // Metal dropdown value → asset folder name
+  const METAL_TO_FOLDER = {
+    'Panchdhatu (Brass)': 'panchdhatu',
+    'Copper':             'copper',
+    'Silver (925)':       'silver',
+    'Platinum':           'platinum',
+    'White Gold':         'white-gold',
+    'Gold (14K)':         'gold',
+    'Gold (18K)':         'gold'
+  };
+
+  const CustomizeApp = {
+    basePrice: {{ product.price }},
+    _assetBase: null,
+    state: {
+      type: 'Ring',
+      gender: 'female',
+      metal: 'Panchdhatu (Brass)',
+      style: 'None',
+      certFee: 0,
+      metalFee: 0,
+      styleFee: 0
+    },
+
+    getAssetBase: function() {
+      if (!this._assetBase) {
+        // asset_url adds ?v=xxx — strip query string before deriving base
+        const known = '{{ "ring_gold_female_blue-sapphire_01_a.webp" | asset_url }}';
+        this._assetBase = known.split('?')[0].replace('ring_gold_female_blue-sapphire_01_a.webp', '');
+      }
+      return this._assetBase;
+    },
+
+    renderDesigns: function() {
+      const grid = document.getElementById('customize-design-grid-dynamic');
+      const emptyEl = document.getElementById('customize-design-empty');
+      if (!grid) return;
+
+      const modal = document.getElementById('customize-modal').querySelector('.customize-modal');
+      const gem = (modal && modal.dataset.productGem) || 'blue-sapphire';
+      const gender = this.state.gender;
+      const metalFolder = METAL_TO_FOLDER[this.state.metal] || 'panchdhatu';
+
+      const ids = (RING_DESIGN_MAP[gender] && RING_DESIGN_MAP[gender][gem] && RING_DESIGN_MAP[gender][gem][metalFolder]) || [];
+
+      grid.innerHTML = '';
+      this.state.style = 'None';
+      this.state.styleFee = 0;
+
+      if (ids.length === 0) {
+        if (emptyEl) emptyEl.style.display = '';
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      const base = this.getAssetBase();
+      ids.forEach(function(id) {
+        const viewEntry = RING_PRIMARY_VIEW[id];
+        const view = (typeof viewEntry === 'object') ? (viewEntry[gender] || 'a') : (viewEntry || 'a');
+        const filename = 'ring_' + metalFolder + '_' + gender + '_' + gem + '_' + id + '_' + view + '.webp';
+        const imgUrl = base + filename;
+        const label = 'Design ' + id;
+        const fee = 180000; // base design fee in paise
+
+        const btn = document.createElement('button');
+        btn.className = 'customize-design-card';
+        btn.setAttribute('data-opt', 'style');
+        btn.setAttribute('data-val', label);
+        btn.innerHTML =
+          '<div class="customize-design-card__img">' +
+            '<img src="' + imgUrl + '" alt="' + label + '" loading="lazy" ' +
+              'onerror="this.parentElement.innerHTML=\'<svg width=40 height=40 viewBox=\\\'0 0 24 24\\\' fill=\\\'none\\\' stroke=\\\'#ccc\\\' stroke-width=\\\'1.5\\\'><circle cx=\\\'12\\\' cy=\\\'8\\\' r=\\\'4\\\'/><path d=\\\'M20 21a8 8 0 1 0-16 0\\\'/></svg>\'">' +
+          '</div>' +
+          '<span class="customize-design-card__label">' + label + '</span>' +
+          '<span class="customize-design-card__fee">+Rs.' + (fee/100).toLocaleString('en-IN') + '</span>';
+
+        btn.addEventListener('click', function() {
+          CustomizeApp.set('style', label, btn, fee);
+        });
+        grid.appendChild(btn);
+      });
+
+      this.updateTotalPrice();
+    },
+
+    setGender: function(gender, el) {
+      this.state.gender = gender;
+      document.querySelectorAll('.customize-gender-btn').forEach(function(b) {
+        b.classList.remove('is-active');
+      });
+      if (el) el.classList.add('is-active');
+      this.renderDesigns();
+    },
+
+    init: function() {
+      // Sync initial state classes
+      Object.keys(this.state).forEach(cat => {
+        const val = this.state[cat];
+        const el = document.querySelector(`.customize-modal [data-opt="${cat}"][data-val="${val}"]`);
+        if (el) el.classList.add('is-active');
+      });
+      this.renderDesigns();
+      this.updateTotalPrice();
+    },
+
+    open: function() {
+      const modal = document.getElementById('customize-modal');
+      if (modal) {
+        modal.classList.add('is-active');
+        document.body.style.overflow = 'hidden';
+        this.init();
+      }
+    },
+
+    close: function() {
+      const modal = document.getElementById('customize-modal');
+      if (modal) {
+        modal.classList.remove('is-active');
+        document.body.style.overflow = '';
+      }
+    },
+
+    set: function(cat, val, el, fee = 0) {
+      this.state[cat] = val;
+      if (cat === 'metal') this.state.metalFee = parseInt(fee) || 0;
+      if (cat === 'style') this.state.styleFee = parseInt(fee) || 0;
+
+      // UI update
+      const container = el.closest('.customize-step') || el.parentElement;
+      const siblings = container.querySelectorAll(`[data-opt="${cat}"]`);
+      siblings.forEach(s => s.classList.remove('is-active'));
+      el.classList.add('is-active');
+
+      if (cat === 'type') {
+        const typeText = document.getElementById('selected-type-text');
+        if (typeText) typeText.innerText = val.toUpperCase();
+        // Show/hide gender step only for Ring type
+        const genderStep = document.getElementById('customize-gender-step');
+        if (genderStep) genderStep.style.display = (val === 'Ring') ? '' : 'none';
+      }
+
+      // Refresh design images when metal changes
+      if (cat === 'metal') this.renderDesigns();
+
+      this.updateTotalPrice();
+    },
+
+    resetStep: function(cat) {
+      const siblings = document.querySelectorAll(`.customize-modal [data-opt="${cat}"]`);
+      siblings.forEach(s => s.classList.remove('is-active'));
+      this.state[cat] = 'None';
+      if (cat === 'metal') this.state.metalFee = 0;
+      if (cat === 'style') this.state.styleFee = 0;
+      this.updateTotalPrice();
+    },
+
+    updateTotalPrice: function() {
+      if (this.basePrice > 100000000) return;
+      const totalPaise = this.basePrice + this.state.certFee + this.state.metalFee + this.state.styleFee;
+      const formattedPrice = (totalPaise / 100).toLocaleString('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0
+      });
+
+      const priceElements = document.querySelectorAll('.product-page__price');
+      priceElements.forEach(el => {
+        el.innerText = formattedPrice;
+      });
+
+      // Show update badge if price increased
+      const badge = document.getElementById('price-update-badge');
+      if (badge) {
+        badge.style.display = (totalPaise > this.basePrice) ? 'inline-block' : 'none';
+      }
+    },
+
+    confirm: function() {
+      let summary = this.state.type;
+      if (this.state.metal && this.state.metal !== 'None') summary += ` / ${this.state.metal}`;
+      if (this.state.style && this.state.style !== 'None') summary += ` / ${this.state.style}`;
+      
+      document.getElementById('customize-summary-text').innerText = summary;
+      
+      // Update hidden form inputs for properties
+      const forms = document.querySelectorAll('form[action^="/cart/add"]');
+      forms.forEach(form => {
+        this.setHiddenProperty(form, 'Jewelry Type', this.state.type);
+        this.setHiddenProperty(form, 'Metal', this.state.metal);
+        this.setHiddenProperty(form, 'Style', this.state.style);
+        
+        // Add total customization fee as a visible property
+        const totalFee = (this.state.metalFee + this.state.styleFee + this.state.certFee) / 100;
+        this.setHiddenProperty(form, 'Customization Fee', 'Rs. ' + totalFee.toLocaleString('en-IN'));
+        this.setHiddenProperty(form, '_customization_fee_raw', this.state.metalFee + this.state.styleFee + this.state.certFee);
+      });
+
+      document.getElementById('customize-info-bar').style.display = 'block';
+      document.getElementById('cta-default').style.display = 'none';
+      document.getElementById('cta-customize').style.display = 'flex';
+      
+      this.close();
+    },
+
+    setHiddenProperty: function(form, name, value) {
+      let input = form.querySelector(`input[name="properties[${name}]"]`);
+      if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `properties[${name}]`;
+        form.appendChild(input);
+      }
+      input.value = value;
+    },
+
+    reset: function() {
+      this.state.metal = 'Panchdhatu (Brass)';
+      this.state.gender = 'female';
+      this.state.style = 'None';
+      this.state.metalFee = 0;
+      this.state.styleFee = 0;
+
+      // Reset gender toggle UI
+      document.querySelectorAll('.customize-gender-btn').forEach(function(b) {
+        b.classList.toggle('is-active', b.dataset.gender === 'female');
+      });
+
+      document.getElementById('customize-info-bar').style.display = 'none';
+      document.getElementById('cta-default').style.display = 'flex';
+      document.getElementById('cta-customize').style.display = 'none';
+
+      this.renderDesigns();
+      this.updateTotalPrice();
+      this.close();
+    }
+  };
+
+  // Video Popup
+  function openVideoPopup(el) {
+    var overlay = document.getElementById('video-popup-overlay');
+    var content = document.getElementById('video-popup-content');
+    var type = el.getAttribute('data-video-type');
+
+    if (type === 'external') {
+      var url = el.getAttribute('data-video-url');
+      content.innerHTML = '<iframe src="' + url + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
+    } else {
+      var sourceEl = el.querySelector('.product-page__video-source');
+      if (sourceEl) {
+        var video = sourceEl.cloneNode(true);
+        video.style.display = 'block';
+        video.setAttribute('controls', '');
+        video.setAttribute('autoplay', '');
+        video.setAttribute('loop', '');
+        content.innerHTML = '';
+        content.appendChild(video);
+      }
+    }
+
+    overlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeVideoPopup() {
+    var overlay = document.getElementById('video-popup-overlay');
+    var content = document.getElementById('video-popup-content');
+    overlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+    // Stop video playback
+    setTimeout(function() { content.innerHTML = ''; }, 300);
+  }
+
+  function copyToClipboard(text, btn) {
+    if (navigator.share) {
+      navigator.share({ title: document.title, url: text });
+      return;
+    }
+    const temp = document.createElement('input');
+    document.body.appendChild(temp);
+    temp.value = text;
+    temp.select();
+    document.execCommand('copy');
+    document.body.removeChild(temp);
+    
+    const icon = btn.innerHTML;
+    btn.innerHTML = '<span style="font-size:10px;font-weight:bold;">COPIED</span>';
+    setTimeout(() => { btn.innerHTML = icon; }, 2000);
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeVideoPopup();
+  });
+
+  /* Zoom functionality commented out
+  function zoomActiveImage() { ... }
+  // Amazon-style Image Zoom (desktop only)
+  (function() { ... })();
+  */
+
+</script>
+
+{% schema %}
+{
+  "name": "Product Page",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "cert_logo",
+      "label": "Certification Logo (overlaid on product image)"
+    },
+    {
+      "type": "text",
+      "id": "default_pincode",
+      "label": "Default Pincode",
+      "default": "110001"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product Page"
+    }
+  ]
+}
+{% endschema %}

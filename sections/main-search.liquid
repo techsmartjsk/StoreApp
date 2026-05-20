@@ -1,0 +1,275 @@
+{%- comment -%}
+  Search Results Section — mirrors collection page layout (filters + product grid)
+{%- endcomment -%}
+
+<section class="collection-page search-page" id="search-results">
+  <div class="page-width">
+    <form class="search-page__form" action="{{ routes.search_url }}" method="get" role="search">
+      <input type="hidden" name="type" value="product">
+      <div class="header__search-form" style="max-width:600px;margin:0 auto var(--space-xl);">
+        <span class="header__search-icon">
+          {% render 'icon', name: 'search' %}
+        </span>
+        <input
+          type="search"
+          name="q"
+          class="header__search-input"
+          value="{{ search.terms | escape }}"
+          placeholder="Search for gemstones, collections..."
+          autocomplete="off"
+          id="search-input"
+        >
+      </div>
+    </form>
+
+    {%- if search.performed -%}
+      <!-- Top Toolbar: Filter pills + Sort -->
+      <div class="collection-page__top-toolbar">
+        <div class="collection-page__toolbar-left">
+          <div class="collection-page__filter-pills">
+            <span class="collection-page__filters-label">FILTERS</span>
+          </div>
+        </div>
+
+        <div class="collection-page__header">
+          <div class="collection-page__header-wrapper">
+            <h1 class="collection-page__title">
+              {%- if search.terms != blank -%}
+                Results for "{{ search.terms }}"
+              {%- else -%}
+                Search Results
+              {%- endif -%}
+            </h1>
+            <span class="collection-page__item-count">- {{ search.results_count }} items</span>
+          </div>
+        </div>
+
+        <div class="collection-page__toolbar-right">
+          {%- assign price_filter = search.filters | where: 'type', 'price_range' | first -%}
+          {%- if price_filter -%}
+            <div class="collection-page__price-presets">
+              {%- assign min_val = price_filter.min_value.value | money_without_currency | replace: ',', '' | plus: 0 -%}
+              {%- assign max_val = price_filter.max_value.value | money_without_currency | replace: ',', '' | plus: 0 -%}
+
+              <button type="button"
+                class="toolbar-price-preset{% if min_val == 0 and max_val == 50000 %} is-active{% endif %}"
+                data-min="0" data-max="50000"
+              >
+                Below ₹50K
+              </button>
+              <button type="button"
+                class="toolbar-price-preset{% if min_val == 50000 and max_val == 1000000 %} is-active{% endif %}"
+                data-min="50000" data-max="1000000"
+              >
+                ₹50K-₹10lac
+              </button>
+              <button type="button"
+                class="toolbar-price-preset{% if min_val == 1000000 and max_val == 0 %} is-active{% endif %}"
+                data-min="1000000" data-max=""
+              >
+                Above ₹10lac
+              </button>
+            </div>
+          {%- endif -%}
+
+          <div class="collection-page__sort">
+            <label for="sort-select" class="collection-page__sort-label">Sort by :</label>
+            <div class="sort-select-wrapper">
+              <select id="sort-select" class="collection-page__sort-select" onchange="const searchParams = new URLSearchParams(window.location.search); searchParams.set('sort_by', this.value); searchParams.delete('page'); window.location.href = window.location.pathname + '?' + searchParams.toString();">
+                <option value="relevance" {% if search.sort_by == 'relevance' or search.sort_by == '' %}selected{% endif %}>Relevance</option>
+                <option value="price-ascending" {% if search.sort_by == 'price-ascending' %}selected{% endif %}>Price: Low to High</option>
+                <option value="price-descending" {% if search.sort_by == 'price-descending' %}selected{% endif %}>Price: High to Low</option>
+                <option value="weight-ascending" {% if search.sort_by == 'weight-ascending' %}selected{% endif %}>Weight: Low to High</option>
+                <option value="weight-descending" {% if search.sort_by == 'weight-descending' %}selected{% endif %}>Weight: High to Low</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="collection-page__layout">
+        <!-- Sidebar (Filters) -->
+        <aside class="collection-page__sidebar" id="main-search-filters" data-id="{{ section.id }}">
+          {% render 'facets', results: search, enable_filtering: true %}
+        </aside>
+
+        <!-- Search Content -->
+        <div class="collection-page__content">
+          <div class="collection-page__grid" id="ProductGridContainer" data-per-page="{{ section.settings.products_per_page }}">
+            {%- paginate search.results by section.settings.products_per_page -%}
+              {%- if search.results_count == 0 -%}
+                <div class="collection-page__empty">
+                  <p class="section-subheading">No results found for "{{ search.terms }}"</p>
+                  <p style="color:var(--color-text-muted);margin-bottom:var(--space-xl);">Try a different search term or browse our collections.</p>
+                  <a href="/collections/all" class="btn btn--primary">Browse All Gems</a>
+                </div>
+              {%- else -%}
+                {%- for result in search.results -%}
+                  {%- if result.object_type == 'product' -%}
+                    {% render 'product-card', product: result %}
+                  {%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+
+              {%- if paginate.pages > 1 -%}
+                <div class="collection-page__pagination">
+                  {{ paginate | default_pagination }}
+                </div>
+              {%- endif -%}
+            {%- endpaginate -%}
+          </div>
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+<style>
+  .search-page__form .header__search-input {
+    font-size: var(--font-size-md);
+    padding: 14px 18px 14px 48px;
+  }
+</style>
+
+<script>
+  // Toolbar Price Preset Logic (mirrors collection page)
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.search-page .toolbar-price-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const min = btn.dataset.min;
+        const max = btn.dataset.max;
+        const searchParams = new URLSearchParams(window.location.search);
+
+        searchParams.set('filter.v.price.gte', min);
+        if (max) {
+          searchParams.set('filter.v.price.lte', max);
+        } else {
+          searchParams.delete('filter.v.price.lte');
+        }
+
+        window.location.search = searchParams.toString();
+      });
+    });
+
+    // ──────────────────────────────────────────────────────────────
+    // Client-side Weight Sort (Shopify sort_by cannot target metafields)
+    // Fetches every page, sorts globally, slices to ?page, rebuilds pagination.
+    // ──────────────────────────────────────────────────────────────
+    (async function sortByWeight() {
+      const params = new URLSearchParams(window.location.search);
+      const sortVal = params.get('sort_by');
+      if (sortVal !== 'weight-ascending' && sortVal !== 'weight-descending') return;
+
+      const select = document.getElementById('sort-select');
+      if (select) select.value = sortVal;
+      const mobileSelect = document.getElementById('Mobile-SortBy');
+      if (mobileSelect) mobileSelect.value = sortVal;
+
+      const grid = document.getElementById('ProductGridContainer');
+      if (!grid) return;
+
+      const pageSize = parseInt(grid.dataset.perPage, 10) || 20;
+      const currentPage = Math.max(1, parseInt(params.get('page') || '1', 10));
+
+      const weightOf = (el) => {
+        const c = parseFloat(el.dataset.weightCarats) || 0;
+        if (c > 0) return c;
+        const r = parseFloat(el.dataset.weightRatti) || 0;
+        return r * 0.8806;
+      };
+
+      const paginationEl = grid.querySelector('.collection-page__pagination');
+
+      let maxPage = currentPage;
+      if (paginationEl) {
+        paginationEl.querySelectorAll('a').forEach((a) => {
+          const href = a.getAttribute('href') || '';
+          const m = href.match(/[?&]page=(\d+)/);
+          if (m) maxPage = Math.max(maxPage, parseInt(m[1], 10));
+        });
+      }
+
+      if (maxPage > 1) {
+        try {
+          const reqs = [];
+          for (let p = 1; p <= maxPage; p++) {
+            if (p === currentPage) continue;
+            const u = new URL(window.location.href);
+            u.searchParams.set('page', p);
+            reqs.push(fetch(u.toString(), { headers: { 'X-Requested-With': 'fetch' } }).then((r) => r.text()));
+          }
+          const pages = await Promise.all(reqs);
+          const parser = new DOMParser();
+          pages.forEach((html) => {
+            const doc = parser.parseFromString(html, 'text/html');
+            doc.querySelectorAll('#ProductGridContainer .product-card').forEach((c) => {
+              grid.insertBefore(document.importNode(c, true), paginationEl);
+            });
+          });
+        } catch (err) {
+          console.warn('Weight sort: failed to fetch additional pages', err);
+        }
+      }
+
+      const seen = new Set();
+      const allCards = Array.from(grid.querySelectorAll('.product-card')).filter((c) => {
+        const key = c.id || (c.querySelector('a') && c.querySelector('a').getAttribute('href')) || '';
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      if (!allCards.length) return;
+      const dir = sortVal === 'weight-descending' ? -1 : 1;
+      allCards.sort((a, b) => (weightOf(a) - weightOf(b)) * dir);
+
+      const total = allCards.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(currentPage, totalPages);
+      const start = (page - 1) * pageSize;
+      const slice = allCards.slice(start, start + pageSize);
+
+      grid.querySelectorAll('.product-card').forEach((c) => c.remove());
+      slice.forEach((c) => grid.insertBefore(c, paginationEl));
+
+      if (paginationEl) {
+        if (totalPages <= 1) {
+          paginationEl.style.display = 'none';
+        } else {
+          const linkFor = (p, label, cls) => {
+            const u = new URL(window.location.href);
+            if (p <= 1) u.searchParams.delete('page');
+            else u.searchParams.set('page', p);
+            return `<a class="${cls}" href="${u.pathname}${u.search ? u.search : ''}">${label}</a>`;
+          };
+          const parts = ['<nav class="pagination" role="navigation" aria-label="Pagination">'];
+          if (page > 1) parts.push(linkFor(page - 1, '«', 'prev'));
+          for (let p = 1; p <= totalPages; p++) {
+            if (p === page) parts.push(`<span class="page current">${p}</span>`);
+            else parts.push(linkFor(p, p, 'page'));
+          }
+          if (page < totalPages) parts.push(linkFor(page + 1, '»', 'next'));
+          parts.push('</nav>');
+          paginationEl.innerHTML = parts.join(' ');
+          paginationEl.style.display = '';
+        }
+      }
+    })();
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Search Results",
+  "settings": [
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "default": 20,
+      "label": "Products per page"
+    }
+  ]
+}
+{% endschema %}

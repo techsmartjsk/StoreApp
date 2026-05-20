@@ -1,0 +1,1102 @@
+{%- comment -%}
+  Collection Page Section - Myntra-style compact layout
+{%- endcomment -%}
+
+{%- assign show_grouped = false -%}
+{%- assign is_curated = false -%}
+{%- assign is_planet = false -%}
+{%- assign grouped_handles = 'navratana,upratnas,sacred-essentials,beyond-nine,strand-edit,sanctum,mangal,shukra,budh,rahu,ketu,surya,chandra,shani,guru' -%}
+{%- assign curated_handles = 'beyond-nine,strand-edit,crush-worthy-delights,sanctum' -%}
+{%- assign planet_handles = 'surya,chandra,mangal,budh,shukra,guru,shani,rahu,ketu' -%}
+{%- assign grouped_handles_arr = grouped_handles | split: ',' -%}
+{%- for h in grouped_handles_arr -%}
+  {%- if collection.handle == h -%}
+    {%- assign show_grouped = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign planet_handles_arr = planet_handles | split: ',' -%}
+{%- for h in planet_handles_arr -%}
+  {%- if collection.handle == h -%}
+    {%- assign is_planet = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- assign curated_handles_arr = curated_handles | split: ',' -%}
+{%- for h in curated_handles_arr -%}
+  {%- if collection.handle == h -%}
+    {%- assign is_curated = true -%}
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}
+
+<section class="collection-page" id="collection-{{ collection.handle }}">
+  <div class="page-width">
+    <!-- Breadcrumb moved to collection-hero-tabs section -->
+    <!-- Top Toolbar: Filter pills + Sort -->
+    <div class="collection-page__top-toolbar">
+      <div class="collection-page__toolbar-left">
+        <div class="collection-page__filter-pills">
+          <span class="collection-page__filters-label">FILTERS</span>
+        </div>
+      </div>
+
+      <div class="collection-page__header">
+        <div class="collection-page__header-wrapper">
+          <h1 class="collection-page__title">{{ collection.title }}</h1>
+          <span class="collection-page__item-count">- {{ collection.products_count }} items</span>
+        </div>
+      </div>
+
+      <div class="collection-page__toolbar-right">
+        {%- unless show_grouped -%}
+        {%- assign price_filter = collection.filters | where: 'type', 'price_range' | first -%}
+        {%- if price_filter -%}
+          <div class="collection-page__price-presets">
+            {%- assign min_val = price_filter.min_value.value | money_without_currency | replace: ',', '' | plus: 0 -%}
+            {%- assign max_val = price_filter.max_value.value | money_without_currency | replace: ',', '' | plus: 0 -%}
+            
+            <button type="button" 
+              class="toolbar-price-preset{% if min_val == 0 and max_val == 50000 %} is-active{% endif %}"
+              data-min="0" data-max="50000"
+            >
+              Below ₹50K
+            </button>
+            <button type="button" 
+              class="toolbar-price-preset{% if min_val == 50000 and max_val == 1000000 %} is-active{% endif %}"
+              data-min="50000" data-max="1000000"
+            >
+              ₹50K-₹10lac
+            </button>
+            <button type="button" 
+              class="toolbar-price-preset{% if min_val == 1000000 and max_val == 0 %} is-active{% endif %}"
+              data-min="1000000" data-max=""
+            >
+              Above ₹10lac
+            </button>
+          </div>
+        {%- endif -%}
+
+        <div class="collection-page__sort">
+          <label for="sort-select" class="collection-page__sort-label">Sort by :</label>
+          <div class="sort-select-wrapper">
+            <select id="sort-select" class="collection-page__sort-select" onchange="const searchParams = new URLSearchParams(window.location.search); searchParams.set('sort_by', this.value); searchParams.delete('page'); window.location.href = window.location.pathname + '?' + searchParams.toString();">
+              <option value="manual" {% if collection.sort_by == 'manual' or collection.sort_by == '' %}selected{% endif %}>Featured</option>
+              <option value="price-ascending" {% if collection.sort_by == 'price-ascending' %}selected{% endif %}>Price: Low to High</option>
+              <option value="price-descending" {% if collection.sort_by == 'price-descending' %}selected{% endif %}>Price: High to Low</option>
+              <option value="weight-ascending" {% if collection.sort_by == 'weight-ascending' %}selected{% endif %}>Weight: Low to High</option>
+              <option value="weight-descending" {% if collection.sort_by == 'weight-descending' %}selected{% endif %}>Weight: High to Low</option>
+            </select>
+          </div>
+        </div>
+        {%- endunless -%}
+      </div>
+    </div>
+
+    <div class="collection-page__layout">
+      <!-- Collection Sidebar (Filters) -->
+      <aside class="collection-page__sidebar" id="main-collection-filters" data-id="{{ section.id }}">
+        {% render 'facets', results: collection, enable_filtering: true %}
+      </aside>
+
+      <!-- Collection Content -->
+      <div class="collection-page__content">
+        {%- if show_grouped -%}
+          {%- comment -%} Build the gem-type list. For navratana/upratnas use a hardcoded
+             list so we don't depend on collection.products (capped at 50). {%- endcomment -%}
+          {%- if collection.handle == 'navratana' -%}
+            {%- assign types_list = 'Ruby||Pearl||Coral||Emerald||Yellow Sapphire||Blue Sapphire||Hessonite||Cats Eye||Diamond||Other||' -%}
+          {%- elsif collection.handle == 'upratnas' -%}
+            {%- assign types_list = 'Garnet||Amethyst||Citrine||Iolite||Turquoise||Peridot||Tourmaline||Moonstone||Lapis Lazuli||Malachite||Natural Zircon||Blue Topaz||Aquamarine||Tiger Eye||Bi-colour Sapphire||White Sapphire||White Coral||Sphatik||Opal||Other||' -%}
+          {%- else -%}
+            {%- assign types_list = '' -%}
+            {%- assign has_untyped = false -%}
+            {%- for product in collection.products -%}
+              {%- assign gem_val = product.metafields.custom.gem_type | default: '' -%}
+              {%- if gem_val != blank -%}
+                {%- assign type_token = gem_val | append: '||' -%}
+                {%- unless types_list contains type_token -%}
+                  {%- assign types_list = types_list | append: type_token -%}
+                {%- endunless -%}
+              {%- else -%}
+                {%- assign has_untyped = true -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- if has_untyped -%}
+              {%- assign types_list = types_list | append: 'Other||' -%}
+            {%- endif -%}
+          {%- endif -%}
+          {%- assign gem_types = types_list | split: '||' -%}
+
+          {%- comment -%} If the Gem Type facet is active, restrict the rendered gem sections to the selected values. {%- endcomment -%}
+          {%- assign _active_gem_filter = '' -%}
+          {%- for filter in collection.filters -%}
+            {%- if filter.label == 'Gem Type' and filter.active_values.size > 0 -%}
+              {%- for v in filter.active_values -%}
+                {%- assign _active_gem_filter = _active_gem_filter | append: v.label | append: '||' -%}
+              {%- endfor -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if _active_gem_filter != '' -%}
+            {%- assign _filtered_list = '' -%}
+            {%- for gt in gem_types -%}
+              {%- if gt == blank -%}{%- continue -%}{%- endif -%}
+              {%- assign _tok = gt | append: '||' -%}
+              {%- if _active_gem_filter contains _tok -%}
+                {%- assign _filtered_list = _filtered_list | append: _tok -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- assign gem_types = _filtered_list | split: '||' -%}
+          {%- endif -%}
+
+          <div class="collection-page__grouped" id="ProductGridContainer" data-per-page="{{ section.settings.products_per_page }}">
+            {%- for gem_type in gem_types -%}
+              {%- if gem_type == blank -%}{%- continue -%}{%- endif -%}
+
+              {%- assign type_handle = gem_type | handleize -%}
+              {%- assign type_collection = collections[type_handle] -%}
+
+              {%- comment -%}
+                Pull products and count from the gem-type's own collection so we
+                aren't bound by the 50-product cap on collection.products.
+                Fall back to filtering the parent collection only for "Other"
+                or when no matching gem-type collection exists.
+              {%- endcomment -%}
+              {%- assign gem_type_dc = gem_type | downcase -%}
+              {%- assign use_type_collection = false -%}
+              {%- if gem_type != 'Other' and type_collection != blank and type_collection.id -%}
+                {%- assign use_type_collection = true -%}
+              {%- endif -%}
+
+              {%- if use_type_collection -%}
+                {%- assign gem_total = type_collection.all_products_count -%}
+                {%- assign view_all_url = type_collection.url -%}
+              {%- else -%}
+                {%- assign gem_total = 0 -%}
+                {%- for product in collection.products -%}
+                  {%- assign product_gem = product.metafields.custom.gem_type | default: '' | downcase -%}
+                  {%- assign product_type_dc = product.type | downcase -%}
+                  {%- if gem_type == 'Other' -%}
+                    {%- if product_gem == blank and product_type_dc == blank -%}
+                      {%- assign gem_total = gem_total | plus: 1 -%}
+                    {%- endif -%}
+                  {%- else -%}
+                    {%- if product_gem == gem_type_dc or product_type_dc == gem_type_dc -%}
+                      {%- assign gem_total = gem_total | plus: 1 -%}
+                    {%- endif -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {%- assign view_all_url = '/collections/' | append: type_handle -%}
+              {%- endif -%}
+
+              {%- if gem_total == 0 -%}{%- continue -%}{%- endif -%}
+
+              <section class="gem-section" data-gem-type="{{ gem_type | escape }}">
+                <header class="gem-section__header">
+                  <div class="gem-section__titles">
+                    <h2 class="gem-section__title">{{ gem_type }}</h2>
+                    <p class="gem-section__subtitle">{{ gem_total }} item{% if gem_total != 1 %}s{% endif %}</p>
+                  </div>
+                  <a href="{{ view_all_url }}" class="gem-section__view-all">View All <span aria-hidden="true">→</span></a>
+                </header>
+                <div class="gem-section__row">
+                  {%- if use_type_collection -%}
+                    {%- for product in type_collection.products limit: 4 -%}
+                      {% render 'product-card', product: product, hide_details: is_planet %}
+                    {%- endfor -%}
+                  {%- else -%}
+                    {%- assign gem_shown = 0 -%}
+                    {%- for product in collection.products -%}
+                      {%- if gem_shown >= 4 -%}{%- break -%}{%- endif -%}
+                      {%- assign product_gem = product.metafields.custom.gem_type | default: '' | downcase -%}
+                      {%- assign product_type_dc = product.type | downcase -%}
+                      {%- if gem_type == 'Other' -%}
+                        {%- if product_gem == blank and product_type_dc == blank -%}
+                          {% render 'product-card', product: product, hide_details: is_planet %}
+                          {%- assign gem_shown = gem_shown | plus: 1 -%}
+                        {%- endif -%}
+                      {%- else -%}
+                        {%- if product_gem == gem_type_dc or product_type_dc == gem_type_dc -%}
+                          {% render 'product-card', product: product, hide_details: is_planet %}
+                          {%- assign gem_shown = gem_shown | plus: 1 -%}
+                        {%- endif -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                  {%- endif -%}
+                </div>
+              </section>
+            {%- endfor -%}
+          </div>
+          {%- if is_curated -%}
+            <div class="collection-page__curated-cta">
+              <a href="/collections" class="curated-cta__btn">View All Curated Collections <span aria-hidden="true">→</span></a>
+            </div>
+          {%- endif -%}
+        {%- else -%}
+        <!-- Product Grid -->
+        <div class="collection-page__grid" id="ProductGridContainer" data-per-page="{{ section.settings.products_per_page }}">
+          {%- paginate collection.products by section.settings.products_per_page -%}
+            {%- if collection.products.size == 0 -%}
+              <div class="collection-page__empty">
+                <div class="contact-enquiry-form">
+                  <div class="contact-enquiry-form__icon-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                  </div>
+                  <h2 class="contact-enquiry-form__title">Didn't find what you want? Contact us.</h2>
+                  
+                  {%- form 'contact', id: 'CollectionContactForm' -%}
+                    {%- if form.posted_successfully? -%}
+                      <p class="form-success">Thank you for your enquiry. We will contact you shortly.</p>
+                    {%- endif -%}
+                    
+                    <div class="contact-enquiry-form__grid">
+                      <div class="field">
+                        <input type="text" name="contact[name]" id="ContactFormName" placeholder="Your Name" required>
+                      </div>
+                      <div class="field">
+                        <input type="email" name="contact[email]" id="ContactFormEmail" placeholder="Your Email" required>
+                      </div>
+                      <div class="field contact-enquiry-form__phone-group">
+                        <div class="country-code-mock">(+91) <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="#282c3f" stroke-width="1.5"/></svg></div>
+                        <input type="tel" name="contact[phone]" id="ContactFormPhone" placeholder="Phone" required>
+                      </div>
+                    </div>
+                    
+                    <div class="field">
+                      <textarea rows="4" name="contact[body]" id="ContactFormMessage" placeholder="Please enter at least 20 characters" minlength="20" required></textarea>
+                    </div>
+                    
+                    <div class="contact-enquiry-form__actions">
+                      <a href="tel:+919876543210" class="btn-call">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        CALL US
+                      </a>
+                      <button type="submit" class="btn-submit">SUBMIT ENQUIRY</button>
+                    </div>
+                  {%- endform -%}
+                </div>
+              </div>
+            {%- else -%}
+              {%- for product in collection.products -%}
+                {% render 'product-card', product: product %}
+              {%- endfor -%}
+            {%- endif -%}
+
+            <!-- Pagination -->
+            {%- if paginate.pages > 1 -%}
+              <div class="collection-page__pagination">
+                {{ paginate | default_pagination }}
+              </div>
+            {%- endif -%}
+          {%- endpaginate -%}
+        </div>
+        {%- endif -%}
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Breadcrumb */
+  .collection-breadcrumb {
+    padding: 4px 0 12px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .collection-breadcrumb__list {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+    font-family: var(--font-body);
+  }
+  .collection-breadcrumb__link {
+    color: #696b79;
+    text-decoration: none;
+  }
+  .collection-breadcrumb__link:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+  .collection-breadcrumb__sep {
+    margin: 0 8px;
+    color: #d4d5d9;
+  }
+  .collection-breadcrumb__current {
+    color: #282c3f;
+    font-weight: 600;
+  }
+
+  /* Header */
+  .collection-page {
+    padding: 0;
+  }
+  .collection-page__header-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .collection-page__title {
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 700;
+    color: #282c3f;
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    display: inline-block;
+  }
+  .collection-page__item-count {
+    font-size: 14px;
+    color: #94969f;
+    font-family: var(--font-body);
+    font-weight: 400;
+  }
+
+  /* Top Toolbar */
+  .collection-page__top-toolbar {
+    display: grid;
+    grid-template-columns: 240px 1fr auto;
+    align-items: stretch;
+    border-bottom: 1px solid #e9e9ed;
+    min-height: 50px;
+  }
+  
+  .collection-page__toolbar-left {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-right: 1px solid #e9e9ed;
+    width: 240px;
+    box-sizing: border-box;
+  }
+
+  .collection-page__header {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    justify-content: flex-start;
+  }
+
+  .collection-page__toolbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 16px;
+    gap: 20px;
+  }
+  .collection-page__filters-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #282c3f;
+    letter-spacing: 0.05em;
+    font-family: var(--font-body);
+  }
+  .collection-page__sort {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .collection-page__sort-label {
+    font-size: 13px;
+    color: #282c3f;
+    font-family: var(--font-body);
+    font-weight: 400;
+  }
+  .collection-page__sort-select {
+    padding: 10px 32px 10px 16px;
+    border: 1px solid #e0d8cc;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: #282c3f;
+    background: #fff;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23282c3f' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    transition: all 0.2s;
+  }
+  .collection-page__sort-select:focus {
+    border-color: var(--color-gold);
+    box-shadow: 0 4px 15px rgba(201, 169, 110, 0.15);
+  }
+
+  /* Price Presets in Toolbar */
+  .collection-page__price-presets {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .toolbar-price-preset {
+    font-size: 11px;
+    font-weight: 600;
+    color: #696b79;
+    padding: 6px 12px;
+    border: 1px solid #e9e9ed;
+    border-radius: 20px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+  }
+  .toolbar-price-preset:hover {
+    border-color: #282c3f;
+    color: #282c3f;
+  }
+  .toolbar-price-preset.is-active {
+    background: #f5f5f6;
+    border-color: #282c3f;
+    color: #282c3f;
+    font-weight: 700;
+  }
+
+  /* Layout */
+  .collection-page__layout {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+  .collection-page__sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    padding-top: 16px;
+    padding-right: 16px;
+    border-right: 1px solid #e9e9ed;
+  }
+  .collection-page__content {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  /* Grouped by gem type */
+  .collection-page__grouped {
+    padding: 16px 0 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+  .gem-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .gem-section__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 4px;
+  }
+  .gem-section__titles { display: flex; flex-direction: column; gap: 2px; }
+  .gem-section__title {
+    font-family: var(--font-heading);
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0;
+    letter-spacing: 0.01em;
+    text-transform: capitalize
+  }
+  .gem-section__subtitle {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: #8a8a8a;
+    margin: 0;
+  }
+  .gem-section__view-all {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary, #1a2a3a);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .gem-section__view-all:hover { color: var(--color-gold); }
+  .gem-section__row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  @media (max-width: 1200px) {
+    .gem-section__row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 992px) {
+    .gem-section__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .gem-section__row {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      gap: 10px;
+      padding-bottom: 6px;
+    }
+    .gem-section__row::-webkit-scrollbar { display: none; }
+    .gem-section__row > * {
+      flex: 0 0 55%;
+      scroll-snap-align: start;
+    }
+    .gem-section__title { font-size: 22px; }
+  }
+
+  /* Curated Collections CTA */
+  .collection-page__curated-cta {
+    text-align: center;
+    padding: 32px 16px 16px;
+  }
+  .curated-cta__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 36px;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--color-primary, #1a2a3a);
+    border: 1px solid var(--color-primary, #1a2a3a);
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+  }
+  .curated-cta__btn:hover {
+    background: var(--color-gold);
+    border-color: var(--color-gold);
+    color: #fff;
+  }
+
+  /* Related Articles on collection page */
+  .collection-related-articles {
+    margin-top: 48px;
+    padding: 32px 0 48px 16px;
+    border-top: 1px solid #e9e9ed;
+  }
+  .collection-related-articles__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .collection-related-articles__title {
+    font-family: var(--font-heading);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--color-primary, #1a2a3a);
+    margin: 0;
+  }
+  .collection-related-articles__view-all {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-primary, #1a2a3a);
+    text-decoration: none;
+  }
+  .collection-related-articles__view-all:hover { color: var(--color-gold); }
+  @media (max-width: 992px) {
+    .collection-related-articles { padding-left: 0; }
+  }
+
+  /* Product Grid - 4 columns like Myntra */
+  .collection-page__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    padding: 16px 0 16px 16px;
+  }
+
+  .collection-page__empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-4xl);
+    color: var(--color-text-muted);
+  }
+
+  .collection-page__pagination {
+    grid-column: 1 / -1;
+    margin-top: 40px;
+    text-align: center;
+    border-top: 1px solid #e9e9ed;
+    padding-top: 30px;
+  }
+  .collection-page__pagination .pagination {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  /* Target the actual interactive/indicator elements */
+  .collection-page__pagination a,
+  .collection-page__pagination .current,
+  .collection-page__pagination .deco {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid #e9e9ed;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    color: #282c3f;
+    text-decoration: none;
+    background: #fff;
+  }
+  
+  /* Reset the wrapping spans that Shopify's default_pagination adds */
+  .collection-page__pagination .page,
+  .collection-page__pagination .next,
+  .collection-page__pagination .prev {
+    display: inline-flex;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .collection-page__pagination a:hover {
+    border-color: var(--color-gold);
+    color: var(--color-gold);
+    background: #fff;
+  }
+  .collection-page__pagination .current {
+    background: var(--color-gold);
+    border-color: var(--color-gold);
+    color: #fff;
+    font-weight: 700;
+  }
+  .collection-page__pagination .deco {
+    border: none;
+    min-width: 20px;
+    background: transparent;
+  }
+
+  @media (max-width: 1200px) {
+    .collection-page__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 992px) {
+    .collection-page__layout {
+      flex-direction: column;
+      gap: 0;
+    }
+    .collection-page__sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid #e9e9ed;
+      padding-right: 0;
+      padding-bottom: 12px;
+    }
+    .collection-page__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      padding-left: 0;
+      gap: 10px;
+    }
+    .collection-page__top-toolbar {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      border-bottom: 1px solid #e9e9ed;
+      gap: 8px;
+      padding: 12px 16px;
+    }
+    .collection-page__toolbar-left {
+      width: 100%;
+      border-right: none;
+      padding: 0;
+    }
+    .collection-page__header {
+      padding: 0;
+    }
+    .collection-page__price-presets {
+      flex-wrap: wrap;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .collection-page .page-width {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    .collection-page__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding-left: 0;
+    }
+    .collection-page__grouped {
+      padding-left: 0;
+    }
+    .collection-page__header {
+      flex-wrap: wrap;
+    }
+    .collection-page__top-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 10px 0;
+    }
+    .collection-page__toolbar-left,
+    .collection-page__header,
+    .collection-page__toolbar-right {
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .collection-page__toolbar-right {
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .collection-page__sort {
+      width: 100%;
+    }
+    .collection-page__sidebar {
+      padding-left: 0;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .collection-page__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+  }
+  /* Contact Enquiry Form for Empty Collection */
+  .contact-enquiry-form {
+    max-width: 800px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 8px;
+    padding: 60px 40px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid #eee;
+    position: relative;
+    text-align: center;
+  }
+  .contact-enquiry-form__icon-badge {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    color: #666;
+  }
+  .contact-enquiry-form__icon-badge svg {
+    width: 36px;
+    height: 36px;
+  }
+  .contact-enquiry-form__title {
+    font-family: var(--font-heading);
+    font-size: 28px;
+    font-weight: 400;
+    color: #1a1a1a;
+    margin-bottom: 40px;
+    letter-spacing: 0.02em;
+  }
+  .contact-enquiry-form__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  .contact-enquiry-form .field {
+    text-align: left;
+    margin-bottom: 15px;
+  }
+  .contact-enquiry-form .field input,
+  .contact-enquiry-form .field textarea {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    font-size: 14px;
+    background: #f8f8f8;
+    color: #333;
+    transition: all 0.2s;
+  }
+  .contact-enquiry-form .field input:focus,
+  .contact-enquiry-form .field textarea:focus {
+    background: #fff;
+    border-color: #ddd;
+    outline: none;
+  }
+  .contact-enquiry-form__phone-group {
+    display: flex;
+    gap: 0;
+  }
+  .country-code-mock {
+    padding: 13px 12px;
+    background: #f0f0f0;
+    border: 1px solid #eee;
+    border-right: none;
+    font-size: 13px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 4px 0 0 4px;
+    white-space: nowrap;
+    cursor: default;
+  }
+  .contact-enquiry-form__phone-group input {
+    border-radius: 0 4px 4px 0 !important;
+  }
+  .contact-enquiry-form__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 10px;
+  }
+  .btn-call, .btn-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    border: none;
+  }
+  .btn-call {
+    background: var(--color-gold);
+    color: #fff;
+  }
+  .btn-submit {
+    background: #ff765b;
+    color: #fff;
+  }
+  .btn-call:hover, .btn-submit:hover {
+    opacity: 0.9;
+    color: #fff;
+  }
+
+  @media (max-width: 768px) {
+    .contact-enquiry-form {
+      padding: 50px 20px 30px;
+      margin: 30px 10px;
+    }
+    .contact-enquiry-form__title {
+      font-size: 22px;
+      margin-bottom: 30px;
+    }
+    .contact-enquiry-form__grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    .contact-enquiry-form__actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // Toolbar Price Preset Logic
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.toolbar-price-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const min = btn.dataset.min;
+        const max = btn.dataset.max;
+        const searchParams = new URLSearchParams(window.location.search);
+
+        // Use the param names from Shopify Filters (usually filter.v.price.gte / lte)
+        searchParams.set('filter.v.price.gte', min);
+        if (max) {
+          searchParams.set('filter.v.price.lte', max);
+        } else {
+          searchParams.delete('filter.v.price.lte');
+        }
+
+        window.location.search = searchParams.toString();
+      });
+    });
+
+    // ──────────────────────────────────────────────────────────────
+    // Client-side Weight Sort (Shopify sort_by cannot target metafields)
+    //   Weight: Low to High  → data-weight-carats ASC  (fallback: data-weight-ratti × 0.8806)
+    //   Weight: High to Low  → data-weight-carats DESC (same fallback)
+    // Fetches every page, sorts the global set, slices to the URL's ?page,
+    // and rebuilds pagination links so navigation across sorted pages works.
+    // ──────────────────────────────────────────────────────────────
+    (async function sortByWeight() {
+      const params = new URLSearchParams(window.location.search);
+      const sortVal = params.get('sort_by');
+      if (sortVal !== 'weight-ascending' && sortVal !== 'weight-descending') return;
+
+      const select = document.getElementById('sort-select');
+      if (select) select.value = sortVal;
+      const mobileSelect = document.getElementById('Mobile-SortBy');
+      if (mobileSelect) mobileSelect.value = sortVal;
+
+      const grid = document.getElementById('ProductGridContainer');
+      if (!grid) return;
+
+      // Grouped-by-gem-type layout: sort each row independently, skip pagination rebuild.
+      if (grid.classList.contains('collection-page__grouped')) {
+        const weightOf = (el) => {
+          const c = parseFloat(el.dataset.weightCarats) || 0;
+          if (c > 0) return c;
+          const r = parseFloat(el.dataset.weightRatti) || 0;
+          return r * 0.8806;
+        };
+        const dir = sortVal === 'weight-descending' ? -1 : 1;
+        grid.querySelectorAll('.gem-section__row').forEach((row) => {
+          const cards = Array.from(row.querySelectorAll('.product-card'));
+          if (cards.length < 2) return;
+          cards.sort((a, b) => (weightOf(a) - weightOf(b)) * dir);
+          cards.forEach((c) => row.appendChild(c));
+        });
+        return;
+      }
+
+      const pageSize = parseInt(grid.dataset.perPage, 10) || 16;
+      const currentPage = Math.max(1, parseInt(params.get('page') || '1', 10));
+
+      const weightOf = (el) => {
+        const c = parseFloat(el.dataset.weightCarats) || 0;
+        if (c > 0) return c;
+        const r = parseFloat(el.dataset.weightRatti) || 0;
+        return r * 0.8806;
+      };
+
+      const paginationEl = grid.querySelector('.collection-page__pagination');
+
+      // Determine the max page number from the pagination links.
+      let maxPage = currentPage;
+      if (paginationEl) {
+        paginationEl.querySelectorAll('a').forEach((a) => {
+          const href = a.getAttribute('href') || '';
+          const m = href.match(/[?&]page=(\d+)/);
+          if (m) maxPage = Math.max(maxPage, parseInt(m[1], 10));
+        });
+      }
+
+      // Fetch every other page in parallel and pull their cards in.
+      if (maxPage > 1) {
+        try {
+          const reqs = [];
+          for (let p = 1; p <= maxPage; p++) {
+            if (p === currentPage) continue;
+            const u = new URL(window.location.href);
+            u.searchParams.set('page', p);
+            reqs.push(fetch(u.toString(), { headers: { 'X-Requested-With': 'fetch' } }).then((r) => r.text()));
+          }
+          const pages = await Promise.all(reqs);
+          const parser = new DOMParser();
+          pages.forEach((html) => {
+            const doc = parser.parseFromString(html, 'text/html');
+            doc.querySelectorAll('#ProductGridContainer .product-card').forEach((c) => {
+              grid.insertBefore(document.importNode(c, true), paginationEl);
+            });
+          });
+        } catch (err) {
+          console.warn('Weight sort: failed to fetch additional pages', err);
+        }
+      }
+
+      // Collect, dedupe (in case of duplicates across pages), sort.
+      const seen = new Set();
+      const allCards = Array.from(grid.querySelectorAll('.product-card')).filter((c) => {
+        const key = c.id || (c.querySelector('a') && c.querySelector('a').getAttribute('href')) || '';
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      if (!allCards.length) return;
+      const dir = sortVal === 'weight-descending' ? -1 : 1;
+      allCards.sort((a, b) => (weightOf(a) - weightOf(b)) * dir);
+
+      // Slice to the current page.
+      const total = allCards.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(currentPage, totalPages);
+      const start = (page - 1) * pageSize;
+      const slice = allCards.slice(start, start + pageSize);
+
+      // Replace grid contents with just this page's sorted cards.
+      grid.querySelectorAll('.product-card').forEach((c) => c.remove());
+      slice.forEach((c) => grid.insertBefore(c, paginationEl));
+
+      // Rebuild pagination UI so clicking a page preserves sort order.
+      if (paginationEl) {
+        if (totalPages <= 1) {
+          paginationEl.style.display = 'none';
+        } else {
+          const linkFor = (p, label, cls) => {
+            const u = new URL(window.location.href);
+            if (p <= 1) u.searchParams.delete('page');
+            else u.searchParams.set('page', p);
+            return `<a class="${cls}" href="${u.pathname}${u.search ? u.search : ''}">${label}</a>`;
+          };
+          const parts = ['<nav class="pagination" role="navigation" aria-label="Pagination">'];
+          if (page > 1) parts.push(linkFor(page - 1, '«', 'prev'));
+          for (let p = 1; p <= totalPages; p++) {
+            if (p === page) parts.push(`<span class="page current">${p}</span>`);
+            else parts.push(linkFor(p, p, 'page'));
+          }
+          if (page < totalPages) parts.push(linkFor(page + 1, '»', 'next'));
+          parts.push('</nav>');
+          paginationEl.innerHTML = parts.join(' ');
+          paginationEl.style.display = '';
+        }
+      }
+    })();
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Collection Page Grid",
+  "settings": [
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 48,
+      "step": 4,
+      "default": 20,
+      "label": "Products per page"
+    },
+    {
+      "type": "header",
+      "content": "Grouped by gem type"
+    },
+    {
+      "type": "paragraph",
+      "content": "When the collection has more than one product type and no filters are active, products are grouped by their gem type metafield (custom.gem_type) into horizontal rows."
+    },
+    {
+      "type": "range",
+      "id": "products_per_row",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "default": 4,
+      "label": "Products shown per gem type row"
+    }
+  ]
+}
+{% endschema %}

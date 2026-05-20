@@ -1,0 +1,387 @@
+{%- comment -%}
+  Header Section — with dropdown support (styled as vertical dropdown)
+{%- endcomment -%}
+
+<header class="site-header" id="site-header">
+  <div class="header__wrapper page-width">
+    <!-- Mobile Menu Toggle -->
+    <button class="header__menu-toggle" id="mobile-menu-toggle" aria-label="Menu">
+      {% render 'icon', name: 'menu' %}
+    </button>
+
+    <!-- Logo -->
+    <div class="header__logo">
+      <a href="/" class="header__logo-link" aria-label="{{ shop.name }}">
+        {% if section.settings.logo != blank %}
+          <img
+            src="{{ section.settings.logo | image_url: width: section.settings.logo_width }}"
+            alt="{{ shop.name }}"
+            width="{{ section.settings.logo_width }}"
+            height="auto"
+            loading="eager"
+            class="header__logo-image"
+          >
+        {% else %}
+          <img
+            src="{{ 'logo.png' | asset_url }}"
+            alt="{{ shop.name }}"
+            width="{{ section.settings.logo_width }}"
+            height="auto"
+            loading="eager"
+            class="header__logo-image"
+          >
+        {% endif %}
+      </a>
+    </div>
+
+    <!-- Search -->
+    <div class="header__search">
+      <form class="header__search-form" action="/search" method="get" role="search">
+        <input type="hidden" name="type" value="product">
+        <span class="header__search-icon">
+          {% render 'icon', name: 'search' %}
+        </span>
+        <input
+          type="search"
+          name="q"
+          id="header-search"
+          class="header__search-input snize-input"
+          placeholder="{{ section.settings.search_placeholder | default: 'Search for...' }}"
+          autocomplete="off"
+        >
+      </form>
+    </div>
+
+    <!-- Header Icons -->
+    <div class="header__icons">
+      <a href="/pages/compare" class="header__icon-btn" aria-label="Compare Products">
+        <img src="{{ 'balance.svg' | asset_url }}">
+        <span class="header__compare-count" id="header-compare-count" style="display:none;">0</span>
+      </a>
+      <a href="/account" class="header__icon-btn" aria-label="Account">
+        {% render 'icon', name: 'user' %}
+      </a>
+      <a href="/pages/wishlist" class="header__icon-btn" aria-label="Wishlist">
+        {% render 'icon', name: 'heart' %}
+        <span class="header__wishlist-count" id="header-wishlist-count" style="display:none;">0</span>
+      </a>
+      <a href="/cart" class="header__icon-btn" aria-label="Cart">
+        {% render 'icon', name: 'cart' %}
+        {% if cart.item_count > 0 %}
+          <span class="header__cart-count flo-cart-icon-bubble">{{ cart.item_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+  </div>
+
+  <!-- Mobile Search (Dedicated Row) -->
+  <div class="header__search-mobile hide-desktop">
+    <div class="page-width">
+      <form class="header__search-form" action="/search" method="get" role="search">
+        <input type="hidden" name="type" value="product">
+        <span class="header__search-icon">
+          {% render 'icon', name: 'search' %}
+        </span>
+        <input
+          type="search"
+          name="q"
+          class="header__search-input snize-input"
+          placeholder="{{ section.settings.search_placeholder | default: 'Search for...' }}"
+          autocomplete="off"
+        >
+      </form>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-bar" id="nav-bar" aria-label="Main navigation">
+    <div class="nav-bar__wrapper page-width">
+      {% for block in section.blocks %}
+        {% if block.type == 'nav_link' %}
+          {%- assign nav_url = '#' -%}
+          {%- if block.settings.collection != blank -%}
+            {%- assign nav_url = block.settings.collection.url -%}
+          {%- elsif block.settings.custom_url != blank -%}
+            {%- assign nav_url = block.settings.custom_url -%}
+          {%- else -%}
+            {%- assign handle = block.settings.label | handle -%}
+            {%- assign nav_url = '/collections/' | append: handle -%}
+          {%- endif -%}
+
+          {%- assign has_dropdown = block.settings.has_dropdown -%}
+          {%- assign nav_label = block.settings.label -%}
+
+          {%- comment -%} Check schema dropdown items {%- endcomment -%}
+          {%- assign schema_items_count = 0 -%}
+          {%- for item_block in section.blocks -%}
+            {%- if item_block.type == 'dropdown_item' -%}
+              {%- assign parent_label = item_block.settings.parent_label | strip -%}
+              {%- if parent_label == nav_label -%}
+                {%- assign schema_items_count = schema_items_count | plus: 1 -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+
+          {% if has_dropdown or schema_items_count > 0 %}
+            <div class="nav-item nav-item--has-dropdown" {{ block.shopify_attributes }}>
+              <a href="{{ nav_url }}" class="nav-bar__link">
+                {{ nav_label }}
+                {% render 'icon', name: 'chevron-down', class: 'nav-bar__chevron' %}
+              </a>
+
+              {%- assign item_count = 0 -%}
+              {%- for item_block in section.blocks -%}
+                {%- if item_block.type == 'dropdown_item' -%}
+                  {%- if item_block.settings.parent_label == nav_label -%}
+                    {%- assign item_count = item_count | plus: 1 -%}
+                  {%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+
+              <div
+                class="mega-menu {% if item_count > 5 %}mega-menu--multi{% endif %}"
+                role="region"
+                aria-label="{{ nav_label }} submenu"
+              >
+                {% if block.settings.dropdown_heading != blank %}
+                  <h4 class="mega-menu__heading">{{ block.settings.dropdown_heading }}</h4>
+                {% endif %}
+
+                <ul class="mega-menu__list">
+                  {%- if nav_label == 'SANCTUM' -%}
+                    {%- for product in collections.sanctum.products limit: 11 -%}
+                      <li class="mega-menu__item-wrapper">
+                        <a href="{{ product.url }}" class="mega-menu__item">
+                          <div class="mega-menu__icon">
+                            <img
+                              src="{{ product.featured_image | image_url: width: 80 }}"
+                              alt="{{ product.title }}"
+                              loading="lazy"
+                            >
+                          </div>
+                          <span class="mega-menu__label">{{ product.title }}</span>
+                        </a>
+                      </li>
+                    {%- endfor -%}
+                    <li class="mega-menu__item-wrapper">
+                      <a href="/collections/sanctum" class="mega-menu__item mega-menu__item--view-all">
+                        <div
+                          class="mega-menu__icon"
+                          style="background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 18px;"
+                        >
+                          →
+                        </div>
+                        <span class="mega-menu__label" style="font-weight: 700; color: var(--color-gold);"
+                          >VIEW ALL Products</span
+                        >
+                      </a>
+                    </li>
+                  {%- else -%}
+                    {%- for item_block in section.blocks -%}
+                      {%- if item_block.type == 'dropdown_item' -%}
+                        {%- assign parent_label = item_block.settings.parent_label | strip -%}
+                        {%- if parent_label == nav_label -%}
+                          <li class="mega-menu__item-wrapper">
+                            <a href="{{ item_block.settings.url | default: '#' }}" class="mega-menu__item">
+                              {%- unless parent_label == 'CURATED COLLECTIONS' -%}
+                                <div class="mega-menu__icon">
+                                  {%- if item_block.settings.asset_name != blank -%}
+                                    <img
+                                      src="{{ item_block.settings.asset_name | asset_url }}"
+                                      alt="{{ item_block.settings.label }}"
+                                      loading="lazy"
+                                    >
+                                  {%- elsif item_block.settings.image != blank -%}
+                                    {{ item_block.settings.image | image_url: width: 80 | image_tag: loading: 'lazy' }}
+                                  {%- endif -%}
+                                </div>
+                              {%- endunless -%}
+                              <span class="mega-menu__label">{{ item_block.settings.label }}</span>
+                            </a>
+                          </li>
+                        {%- endif -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                    <li class="mega-menu__item-wrapper">
+                      <a href="{{ nav_url }}" class="mega-menu__item mega-menu__item--view-all">
+                        <div
+                          class="mega-menu__icon"
+                          style="background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 18px;"
+                        >
+                          →
+                        </div>
+                        <span class="mega-menu__label" style="font-weight: 700; color: var(--color-gold);"
+                          >VIEW ALL {{ nav_label -}}
+                        </span>
+                      </a>
+                    </li>
+                  {%- endif -%}
+                </ul>
+              </div>
+            </div>
+          {% else %}
+            <a href="{{ nav_url }}" class="nav-bar__link" {{ block.shopify_attributes }}>
+              {{ nav_label }}
+            </a>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+
+      <!-- Mobile Utility Links -->
+      <div class="mobile-utils hide-desktop">
+        <a href="/pages/compare" class="nav-bar__link">
+          <img src="{{ 'balance.svg' | asset_url }}">
+          <span>Product Comparison</span>
+        </a>
+        <a href="/account" class="nav-bar__link">
+          {% render 'icon', name: 'user' %}
+          <span>Account</span>
+        </a>
+        <a href="/collections" class="nav-bar__link">
+          {% render 'icon', name: 'gem' %}
+          <span>Collections</span>
+        </a>
+        <a href="/pages/wishlist" class="nav-bar__link">
+          {% render 'icon', name: 'heart' %}
+          <span>Wishlist</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Mobile: tap on dropdown nav items toggles sub-menu
+    document.querySelectorAll('.nav-item--has-dropdown .nav-bar__link').forEach((link) => {
+      link.addEventListener('click', function (e) {
+        if (window.innerWidth <= 992) {
+          e.preventDefault();
+          const navItem = this.closest('.nav-item--has-dropdown');
+          navItem.classList.toggle('is-open');
+        }
+      });
+    });
+
+    // Close menu on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.nav-item--has-dropdown')) {
+        document.querySelectorAll('.nav-item--has-dropdown.is-open').forEach((el) => el.classList.remove('is-open'));
+      }
+    });
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo image"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 50,
+      "max": 300,
+      "step": 10,
+      "default": 150,
+      "label": "Logo width (px)"
+    },
+    {
+      "type": "text",
+      "id": "search_placeholder",
+      "label": "Search placeholder text",
+      "default": "Search for..."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "nav_link",
+      "name": "Navigation Link",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Navigation Label",
+          "default": "Link"
+        },
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Select Collection"
+        },
+        {
+          "type": "url",
+          "id": "custom_url",
+          "label": "Or Custom URL"
+        },
+        {
+          "type": "checkbox",
+          "id": "has_dropdown",
+          "label": "Show dropdown",
+          "default": false
+        },
+        {
+          "type": "text",
+          "id": "dropdown_heading",
+          "label": "Dropdown Heading (optional)",
+          "info": "e.g. ZODIAC STONES (RASHI RATNA)"
+        }
+      ]
+    },
+    {
+      "type": "dropdown_item",
+      "name": "Dropdown Item",
+      "settings": [
+        {
+          "type": "text",
+          "id": "parent_label",
+          "label": "Parent Nav Label (must match exactly)",
+          "info": "e.g. NAVRATNA"
+        },
+        {
+          "type": "text",
+          "id": "column_heading",
+          "label": "Column Heading (optional grouping)",
+          "default": "Items"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Item Label",
+          "default": "Gemstone"
+        },
+        {
+          "type": "url",
+          "id": "url",
+          "label": "Item URL"
+        },
+        {
+          "type": "text",
+          "id": "asset_name",
+          "label": "Icon image asset name (e.g. nav-ruby.png)"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Header",
+      "blocks": [
+        { "type": "nav_link", "settings": { "label": "NAVRATNA", "has_dropdown": true } },
+        { "type": "nav_link", "settings": { "label": "UPRATNAS", "has_dropdown": true } },
+
+        {
+          "type": "nav_link",
+          "settings": { "label": "SACRED ESSENTIALS", "custom_url": "/collections/sacred-essentials" }
+        },
+        { "type": "nav_link", "settings": { "label": "SANCTUM", "custom_url": "/collections/sanctum" } },
+        { "type": "nav_link", "settings": { "label": "CURATED COLLECTIONS", "custom_url": "/collections/all" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

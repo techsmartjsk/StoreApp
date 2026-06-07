@@ -17,7 +17,7 @@
         "search_placeholder": "Search for..."
       },
       "blocks": {
-        "nav_1": { "type": "nav_link", "settings": { "label": "NAVRATNA", "has_dropdown": true } },
+        "nav_1": { "type": "nav_link", "settings": { "label": "NAVRATNA", "has_dropdown": true, "custom_url": "/collections/navratana" } },
         "nav_2": { "type": "nav_link", "settings": { "label": "UPRATNAS", "has_dropdown": true } },
         "nav_6": { "type": "nav_link", "settings": { "label": "BEYOND NINE", "has_dropdown": true, "custom_url": "/collections/beyond-nine" } },
         "nav_3": { "type": "nav_link", "settings": { "label": "SACRED ESSENTIALS", "has_dropdown": true } },

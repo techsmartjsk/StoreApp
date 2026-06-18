@@ -754,7 +754,7 @@
 <!-- Customization Modal Overlay -->
 {%- assign _modal_gem = product.metafields.custom.gem_type | default: product.type | handleize -%}
 <div class="customize-modal-overlay" id="customize-modal" onclick="CustomizeApp.close()">
-  <div class="customize-modal" onclick="event.stopPropagation()" data-product-gem="{{ _modal_gem }}">
+  <div class="customize-modal" onclick="event.stopPropagation()" data-product-gem="{{ _modal_gem }}" data-product-title="{{ product.title | escape }}" data-product-url="{{ shop.url }}{{ product.url }}">
     <button class="customize-modal__close" onclick="CustomizeApp.close()" aria-label="Close customization">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -2736,6 +2736,20 @@
   }
   .customize-design-card:hover { border-color: #2d4a3e; }
   .customize-design-card.is-active { border-color: #2d4a3e; border-width: 2px; background: #f8faf9; }
+
+  /* "Add my own design" card */
+  .customize-design-card--add {
+    border-style: dashed;
+    border-color: #2d4a3e;
+    background: #f8faf9;
+  }
+  .customize-design-card--add:hover { background: #eef3f1; }
+  .customize-design-card--add .cdc-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2d4a3e;
+  }
   .customize-design-card__img {
     aspect-ratio: 1;
     background: #fff;
@@ -2801,11 +2815,11 @@
     color: #333;
     padding: 6px 4px 2px;
   }
-  .customize-design-card__fee {
-    font-size: 10px;
-    color: var(--color-gold, #c9a96e);
+  .customize-design-card__metal-price {
+    font-size: 11px;
     font-weight: 600;
-    padding-bottom: 8px;
+    color: var(--color-gold, #c9a96e);
+    padding: 0 4px 8px;
   }
   .customize-design-empty {
     font-size: 12px;
@@ -2837,6 +2851,7 @@
   }
   .customize-modal__confirm:hover { background: #b8963e; }
   .customize-modal__confirm:active { transform: scale(0.97); }
+
 
   /* Summary Bar in Page */
   .product-page__customize-info {
@@ -3285,6 +3300,22 @@
       return this._assetBase;
     },
 
+    whatsapp: function(e, intro) {
+      if (e) e.preventDefault();
+      var modal = document.querySelector('#customize-modal .customize-modal');
+      var s = this.state;
+      var lines = [intro || 'Hi, I want this design'];
+      if (modal && modal.dataset.productTitle) lines.push('Product: ' + modal.dataset.productTitle);
+      if (s.type) lines.push('Type: ' + s.type);
+      if (s.metal) lines.push('Metal: ' + s.metal);
+      if (s.gender) lines.push('Wearing for: ' + s.gender);
+      if (s.style && s.style !== 'None') lines.push('Design: ' + s.style);
+      if (s.ringSize) lines.push('Ring size: ' + s.ringSize);
+      if (modal && modal.dataset.productUrl) lines.push(modal.dataset.productUrl);
+      var url = 'https://wa.me/919908190811?text=' + encodeURIComponent(lines.join('\n'));
+      window.open(url, '_blank', 'noopener');
+    },
+
     renderDesigns: function() {
       const grid = document.getElementById('customize-design-grid-dynamic');
       const emptyEl = document.getElementById('customize-design-empty');
@@ -3301,6 +3332,20 @@
       this.state.style = 'None';
       this.state.styleFee = 0;
 
+      // "Add my own design" card — always first, sends the design over WhatsApp
+      var addCard = document.createElement('button');
+      addCard.type = 'button';
+      addCard.className = 'customize-design-card customize-design-card--add';
+      addCard.innerHTML =
+        '<div class="customize-design-card__img cdc-add">' +
+          '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+        '</div>' +
+        '<span class="customize-design-card__label">Add my own design</span>';
+      addCard.addEventListener('click', function() {
+        CustomizeApp.whatsapp(null, 'Hi, I want to add my own design (I will share it here).');
+      });
+      grid.appendChild(addCard);
+
       if (ids.length === 0) {
         if (emptyEl) emptyEl.style.display = '';
         return;
@@ -3308,12 +3353,24 @@
       if (emptyEl) emptyEl.style.display = 'none';
 
       const base = this.getAssetBase();
+
+      // Price of the currently selected metal — shown beside every design.
+      var metalPrice = '';
+      var metalSel = document.querySelector('.customize-metal-select');
+      if (metalSel && metalSel.options[metalSel.selectedIndex]) {
+        var mOpt = metalSel.options[metalSel.selectedIndex];
+        var mFlat = parseInt(mOpt.dataset.flat) || 0;
+        var mFee = parseInt(mOpt.dataset.fee) || 0;
+        if (mFlat > 0) metalPrice = 'Rs. ' + (mFlat / 100).toLocaleString('en-IN') + ' advance';
+        else if (mFee > 0) metalPrice = '+Rs. ' + (mFee / 100).toLocaleString('en-IN');
+      }
+
       ids.forEach(function(id) {
         const files = DESIGN_FILES[metalKey + '|' + gender + '|' + gem + '|' + id] || [];
         if (!files.length) return;
 
         const label = 'Design ' + id;
-        const fee = 180000;
+        const fee = 0; // designs are free
 
         const btn = document.createElement('button');
         btn.className = 'customize-design-card';
@@ -3343,7 +3400,7 @@
             (dots ? '<div class="cdc-dots">' + dots + '</div>' : '') +
           '</div>' +
           '<span class="customize-design-card__label">' + label + '</span>' +
-          '<span class="customize-design-card__fee">+Rs.' + (fee/100).toLocaleString('en-IN') + '</span>';
+          (metalPrice ? '<span class="customize-design-card__metal-price">' + metalPrice + '</span>' : '');
 
         // Carousel logic
         if (files.length > 1) {

@@ -2914,6 +2914,7 @@
 </style>
 
 {{ 'ring-customizer-data.js' | asset_url | script_tag }}
+{{ 'pendant-customizer-data.js' | asset_url | script_tag }}
 <script>
   function setMainMedia(mediaId, btn) {
     document.querySelectorAll('.product-page__media-item').forEach(item => {
@@ -3259,9 +3260,9 @@
     });
   });
 
-  // ── Ring design image map ──────────────────────────────────────────
+  // ── Ring / Pendant design image maps ─────────────────────────────
   const RING_DESIGN_MAP = window.RING_DESIGN_MAP || {};
-
+  const PENDANT_DESIGN_MAP = window.PENDANT_DESIGN_MAP || {};
   const DESIGN_FILES = window.DESIGN_FILES || {};
 
   // Metal dropdown value → asset key
@@ -3325,14 +3326,13 @@
       const gem = (modal && modal.dataset.productGem) || 'blue-sapphire';
       const gender = this.state.gender;
       const metalKey = METAL_TO_FOLDER[this.state.metal] || 'panchdhatu';
-
-      const ids = (RING_DESIGN_MAP[gender] && RING_DESIGN_MAP[gender][gem] && RING_DESIGN_MAP[gender][gem][metalKey]) || [];
+      const isPendant = this.state.type === 'Pendant';
 
       grid.innerHTML = '';
       this.state.style = 'None';
       this.state.styleFee = 0;
 
-      // "Add my own design" card — always first, sends the design over WhatsApp
+      // "Add my own design" card — always first
       var addCard = document.createElement('button');
       addCard.type = 'button';
       addCard.className = 'customize-design-card customize-design-card--add';
@@ -3345,12 +3345,6 @@
         CustomizeApp.whatsapp(null, 'Hi, I want to add my own design (I will share it here).');
       });
       grid.appendChild(addCard);
-
-      if (ids.length === 0) {
-        if (emptyEl) emptyEl.style.display = '';
-        return;
-      }
-      if (emptyEl) emptyEl.style.display = 'none';
 
       const base = this.getAssetBase();
 
@@ -3365,67 +3359,106 @@
         else if (mFee > 0) metalPrice = '+Rs. ' + (mFee / 100).toLocaleString('en-IN');
       }
 
-      ids.forEach(function(id) {
-        const files = DESIGN_FILES[metalKey + '|' + gender + '|' + gem + '|' + id] || [];
-        if (!files.length) return;
+      if (isPendant) {
+        // ── Pendant designs: PENDANT_DESIGN_MAP[gem][metal] = [filename, ...]
+        var pendantFiles = (PENDANT_DESIGN_MAP[gem] && PENDANT_DESIGN_MAP[gem][metalKey]) || [];
 
-        const label = 'Design ' + id;
-        const fee = 0; // designs are free
+        if (pendantFiles.length === 0) {
+          if (emptyEl) { emptyEl.textContent = 'No pendant designs available for this combination.'; emptyEl.style.display = ''; }
+          return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
 
-        const btn = document.createElement('button');
-        btn.className = 'customize-design-card';
-        btn.setAttribute('data-opt', 'style');
-        btn.setAttribute('data-val', label);
+        pendantFiles.forEach(function(fname, idx) {
+          var label = 'Design ' + (idx + 1);
 
-        // Build carousel slides
-        const slides = files.map(function(fname, i) {
-          return '<div class="cdc-slide"><img src="' + base + fname + '" alt="' + label + ' view ' + (i+1) + '" loading="lazy"></div>';
-        }).join('');
+          var btn = document.createElement('button');
+          btn.className = 'customize-design-card';
+          btn.setAttribute('data-opt', 'style');
+          btn.setAttribute('data-val', label);
 
-        const dots = files.length > 1 ? files.map(function(_, i) {
-          return '<button class="cdc-dot' + (i === 0 ? ' is-active' : '') + '" data-idx="' + i + '" type="button"></button>';
-        }).join('') : '';
+          btn.innerHTML =
+            '<div class="customize-design-card__img">' +
+              '<img src="' + base + fname + '" alt="' + label + '" loading="lazy">' +
+            '</div>' +
+            '<span class="customize-design-card__label">' + label + '</span>' +
+            (metalPrice ? '<span class="customize-design-card__metal-price">' + metalPrice + '</span>' : '');
 
-        const prevBtn = files.length > 1
-          ? '<button class="cdc-nav cdc-nav--prev" type="button" aria-label="Previous"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button>'
-          : '';
-        const nextBtn = files.length > 1
-          ? '<button class="cdc-nav cdc-nav--next" type="button" aria-label="Next"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>'
-          : '';
+          btn.addEventListener('click', function() {
+            CustomizeApp.set('style', label, btn, 0);
+          });
+          grid.appendChild(btn);
+        });
 
-        btn.innerHTML =
-          '<div class="customize-design-card__img cdc-carousel">' +
-            '<div class="cdc-track">' + slides + '</div>' +
-            prevBtn + nextBtn +
-            (dots ? '<div class="cdc-dots">' + dots + '</div>' : '') +
-          '</div>' +
-          '<span class="customize-design-card__label">' + label + '</span>' +
-          (metalPrice ? '<span class="customize-design-card__metal-price">' + metalPrice + '</span>' : '');
+      } else {
+        // ── Ring designs: RING_DESIGN_MAP[gender][gem][metal] = [id, ...]
+        var ids = (RING_DESIGN_MAP[gender] && RING_DESIGN_MAP[gender][gem] && RING_DESIGN_MAP[gender][gem][metalKey]) || [];
 
-        // Carousel logic
-        if (files.length > 1) {
-          var cur = 0;
-          var track = btn.querySelector('.cdc-track');
-          var dotEls = btn.querySelectorAll('.cdc-dot');
+        if (ids.length === 0) {
+          if (emptyEl) { emptyEl.textContent = 'No ring designs available for this combination.'; emptyEl.style.display = ''; }
+          return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
 
-          function goTo(idx) {
-            cur = (idx + files.length) % files.length;
-            track.style.transform = 'translateX(-' + (cur * 100) + '%)';
-            dotEls.forEach(function(d, i) { d.classList.toggle('is-active', i === cur); });
+        ids.forEach(function(id) {
+          const files = DESIGN_FILES[metalKey + '|' + gender + '|' + gem + '|' + id] || [];
+          if (!files.length) return;
+
+          const label = 'Design ' + id;
+
+          const btn = document.createElement('button');
+          btn.className = 'customize-design-card';
+          btn.setAttribute('data-opt', 'style');
+          btn.setAttribute('data-val', label);
+
+          const slides = files.map(function(fname, i) {
+            return '<div class="cdc-slide"><img src="' + base + fname + '" alt="' + label + ' view ' + (i+1) + '" loading="lazy"></div>';
+          }).join('');
+
+          const dots = files.length > 1 ? files.map(function(_, i) {
+            return '<button class="cdc-dot' + (i === 0 ? ' is-active' : '') + '" data-idx="' + i + '" type="button"></button>';
+          }).join('') : '';
+
+          const prevBtn = files.length > 1
+            ? '<button class="cdc-nav cdc-nav--prev" type="button" aria-label="Previous"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg></button>'
+            : '';
+          const nextBtn = files.length > 1
+            ? '<button class="cdc-nav cdc-nav--next" type="button" aria-label="Next"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>'
+            : '';
+
+          btn.innerHTML =
+            '<div class="customize-design-card__img cdc-carousel">' +
+              '<div class="cdc-track">' + slides + '</div>' +
+              prevBtn + nextBtn +
+              (dots ? '<div class="cdc-dots">' + dots + '</div>' : '') +
+            '</div>' +
+            '<span class="customize-design-card__label">' + label + '</span>' +
+            (metalPrice ? '<span class="customize-design-card__metal-price">' + metalPrice + '</span>' : '');
+
+          if (files.length > 1) {
+            var cur = 0;
+            var track = btn.querySelector('.cdc-track');
+            var dotEls = btn.querySelectorAll('.cdc-dot');
+
+            function goTo(idx) {
+              cur = (idx + files.length) % files.length;
+              track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+              dotEls.forEach(function(d, i) { d.classList.toggle('is-active', i === cur); });
+            }
+
+            btn.querySelector('.cdc-nav--prev').addEventListener('click', function(e) { e.stopPropagation(); goTo(cur - 1); });
+            btn.querySelector('.cdc-nav--next').addEventListener('click', function(e) { e.stopPropagation(); goTo(cur + 1); });
+            dotEls.forEach(function(d) {
+              d.addEventListener('click', function(e) { e.stopPropagation(); goTo(parseInt(d.dataset.idx)); });
+            });
           }
 
-          btn.querySelector('.cdc-nav--prev').addEventListener('click', function(e) { e.stopPropagation(); goTo(cur - 1); });
-          btn.querySelector('.cdc-nav--next').addEventListener('click', function(e) { e.stopPropagation(); goTo(cur + 1); });
-          dotEls.forEach(function(d) {
-            d.addEventListener('click', function(e) { e.stopPropagation(); goTo(parseInt(d.dataset.idx)); });
+          btn.addEventListener('click', function() {
+            CustomizeApp.set('style', label, btn, 0);
           });
-        }
-
-        btn.addEventListener('click', function() {
-          CustomizeApp.set('style', label, btn, fee);
+          grid.appendChild(btn);
         });
-        grid.appendChild(btn);
-      });
+      }
 
       this.updateTotalPrice();
     },
@@ -3447,9 +3480,12 @@
         if (el) el.classList.add('is-active');
       });
       const isRing = this.state.type === 'Ring';
+      const isPendant = this.state.type === 'Pendant';
+      const genderStep = document.getElementById('customize-gender-step');
+      if (genderStep) genderStep.style.display = isRing ? '' : 'none';
       const designStep = document.getElementById('customize-design-step');
-      if (designStep) designStep.style.display = isRing ? '' : 'none';
-      if (isRing) this.renderDesigns();
+      if (designStep) designStep.style.display = (isRing || isPendant) ? '' : 'none';
+      if (isRing || isPendant) this.renderDesigns();
       this.updateTotalPrice();
     },
 
@@ -3488,16 +3524,18 @@
         const typeText = document.getElementById('selected-type-text');
         if (typeText) typeText.innerText = val.toUpperCase();
         const isRing = val === 'Ring';
-        // Show/hide gender step only for Ring type
+        const isPendant = val === 'Pendant';
+        // Gender only for Ring
         const genderStep = document.getElementById('customize-gender-step');
         if (genderStep) genderStep.style.display = isRing ? '' : 'none';
-        // Show/hide ring size step only for Ring type
+        // Ring size only for Ring
         const ringSizeStep = document.getElementById('customize-ring-size-step');
         if (ringSizeStep) ringSizeStep.style.display = isRing ? '' : 'none';
         if (!isRing) this.state.ringSize = '';
-        // Show/hide designs step only for Ring type
+        // Design step for Ring and Pendant
         const designStep = document.getElementById('customize-design-step');
-        if (designStep) designStep.style.display = isRing ? '' : 'none';
+        if (designStep) designStep.style.display = (isRing || isPendant) ? '' : 'none';
+        if (isRing || isPendant) this.renderDesigns();
       }
 
       // Refresh design images when metal changes

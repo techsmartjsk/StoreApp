@@ -900,52 +900,75 @@
 <!-- You May Also Like -->
 {%- assign recommendation_count = 0 -%}
 
-{%- assign target_price = product.price -%}
+{%- assign target_price  = product.price -%}
 {%- assign target_carats = product.metafields.custom.weight_carats | plus: 0.0 -%}
-{%- assign current_gem_type = product.metafields.custom.gem_type | default: product.type -%}
+{%- assign current_gem_type      = product.metafields.custom.gem_type | default: product.type -%}
 {%- assign gem_collection_handle = current_gem_type | handleize -%}
-{%- assign rec_collection = collections[gem_collection_handle] | default: collections.all -%}
-
-{%- assign min_price = target_price | times: 0.90 -%}
-{%- assign max_price = target_price | times: 1.10 -%}
-{%- assign min_carat = target_carats | times: 0.90 -%}
-{%- assign max_carat = target_carats | times: 1.10 -%}
+{%- assign rec_collection        = collections[gem_collection_handle] | default: collections.all -%}
 
 {%- comment -%}
-  Classify candidates into priority buckets so the suggestions are similar in
-  weight, not just price:
-    1. both  – close in price AND weight
-    2. weight – close in weight only
-    3. price – close in price only
-  We then render the first 4 across those buckets in order.
+  Three widening price bands: 10 → 20 → 30 %.
+  Each product lands in its tightest matching bucket (no duplicates).
+  Priority within each band: price+carat > carat-only > price-only.
+  Final order: all 10% buckets first, then 20%, then 30%.
 {%- endcomment -%}
-{%- assign both_handles = '' -%}
-{%- assign weight_handles = '' -%}
-{%- assign price_handles = '' -%}
+
+{%- assign mn10 = target_price | times: 0.90 -%}
+{%- assign mx10 = target_price | times: 1.10 -%}
+{%- assign mn20 = target_price | times: 0.80 -%}
+{%- assign mx20 = target_price | times: 1.20 -%}
+{%- assign mn30 = target_price | times: 0.70 -%}
+{%- assign mx30 = target_price | times: 1.30 -%}
+
+{%- assign mc10 = target_carats | times: 0.90 -%}
+{%- assign xc10 = target_carats | times: 1.10 -%}
+{%- assign mc20 = target_carats | times: 0.80 -%}
+{%- assign xc20 = target_carats | times: 1.20 -%}
+{%- assign mc30 = target_carats | times: 0.70 -%}
+{%- assign xc30 = target_carats | times: 1.30 -%}
+
+{%- assign both10 = '' -%}{%- assign wt10 = '' -%}{%- assign pr10 = '' -%}
+{%- assign both20 = '' -%}{%- assign wt20 = '' -%}{%- assign pr20 = '' -%}
+{%- assign both30 = '' -%}{%- assign wt30 = '' -%}{%- assign pr30 = '' -%}
+
 {%- for p in rec_collection.products -%}
   {%- if p.id == product.id -%}{%- continue -%}{%- endif -%}
-  {%- assign p_price = p.price -%}
-  {%- assign p_carats = p.metafields.custom.weight_carats | plus: 0.0 -%}
+  {%- assign pp = p.price -%}
+  {%- assign pc = p.metafields.custom.weight_carats | plus: 0.0 -%}
 
-  {%- assign price_match = false -%}
-  {%- assign carat_match = false -%}
-  {%- if p_price >= min_price and p_price <= max_price -%}
-    {%- assign price_match = true -%}
-  {%- endif -%}
-  {%- if target_carats > 0 and p_carats >= min_carat and p_carats <= max_carat -%}
-    {%- assign carat_match = true -%}
-  {%- endif -%}
+  {%- assign pm10 = false -%}{%- assign cm10 = false -%}
+  {%- assign pm20 = false -%}{%- assign cm20 = false -%}
+  {%- assign pm30 = false -%}{%- assign cm30 = false -%}
 
-  {%- if price_match and carat_match -%}
-    {%- assign both_handles = both_handles | append: p.handle | append: ' ' -%}
-  {%- elsif carat_match -%}
-    {%- assign weight_handles = weight_handles | append: p.handle | append: ' ' -%}
-  {%- elsif price_match -%}
-    {%- assign price_handles = price_handles | append: p.handle | append: ' ' -%}
+  {%- if pp >= mn10 and pp <= mx10 -%}{%- assign pm10 = true -%}{%- endif -%}
+  {%- if pp >= mn20 and pp <= mx20 -%}{%- assign pm20 = true -%}{%- endif -%}
+  {%- if pp >= mn30 and pp <= mx30 -%}{%- assign pm30 = true -%}{%- endif -%}
+  {%- if target_carats > 0 and pc >= mc10 and pc <= xc10 -%}{%- assign cm10 = true -%}{%- endif -%}
+  {%- if target_carats > 0 and pc >= mc20 and pc <= xc20 -%}{%- assign cm20 = true -%}{%- endif -%}
+  {%- if target_carats > 0 and pc >= mc30 and pc <= xc30 -%}{%- assign cm30 = true -%}{%- endif -%}
+
+  {%- if pm10 and cm10 -%}
+    {%- assign both10 = both10 | append: p.handle | append: ' ' -%}
+  {%- elsif cm10 -%}
+    {%- assign wt10 = wt10 | append: p.handle | append: ' ' -%}
+  {%- elsif pm10 -%}
+    {%- assign pr10 = pr10 | append: p.handle | append: ' ' -%}
+  {%- elsif pm20 and cm20 -%}
+    {%- assign both20 = both20 | append: p.handle | append: ' ' -%}
+  {%- elsif cm20 -%}
+    {%- assign wt20 = wt20 | append: p.handle | append: ' ' -%}
+  {%- elsif pm20 -%}
+    {%- assign pr20 = pr20 | append: p.handle | append: ' ' -%}
+  {%- elsif pm30 and cm30 -%}
+    {%- assign both30 = both30 | append: p.handle | append: ' ' -%}
+  {%- elsif cm30 -%}
+    {%- assign wt30 = wt30 | append: p.handle | append: ' ' -%}
+  {%- elsif pm30 -%}
+    {%- assign pr30 = pr30 | append: p.handle | append: ' ' -%}
   {%- endif -%}
 {%- endfor -%}
 
-{%- assign ordered_handles = both_handles | append: weight_handles | append: price_handles | split: ' ' -%}
+{%- assign ordered_handles = both10 | append: wt10 | append: pr10 | append: both20 | append: wt20 | append: pr20 | append: both30 | append: wt30 | append: pr30 | split: ' ' -%}
 {%- capture rec_cards -%}
   {%- for h in ordered_handles -%}
     {%- assign rp = all_products[h] -%}

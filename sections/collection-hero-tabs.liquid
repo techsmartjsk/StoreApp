@@ -214,7 +214,14 @@
 {%- endfor -%}
 
 {%- assign is_collection_overview = false -%}
-{%- if collection.handle == 'navratana' or collection.handle == 'upratnas' -%}
+{%- if collection.handle == 'navratana'
+    or collection.handle == 'upratnas'
+    or collection.handle == 'sanctum'
+    or collection.handle == 'sacred-essentials'
+    or collection.handle == 'beyond-nine'
+    or collection.handle == 'strand-edit'
+    or collection.handle == 'crush-worthy-delights'
+    or collection.handle == 'crushworthy-delights' -%}
   {%- assign is_collection_overview = true -%}
 {%- endif -%}
 
@@ -527,22 +534,22 @@
         <nav class="collection-tabs" aria-label="Collection tabs">
           <ul class="collection-tabs__list" role="tablist">
             <li class="collection-tabs__item">
-              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="about">WHAT IT IS</button>
+              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="about">ABOUT</button>
             </li>
             <li class="collection-tabs__item">
-              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="who-wear">WHO IS IT FOR</button>
+              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="who-wear">WHO SHOULD WEAR</button>
             </li>
             <li class="collection-tabs__item">
-              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="benefits">WHY IT EXISTS</button>
+              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="benefits">BENEFITS</button>
             </li>
             <li class="collection-tabs__item">
-              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="pricing">WHAT BELONGS HERE</button>
+              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="pricing">PRICING &amp; ORIGINS</button>
             </li>
             <li class="collection-tabs__item">
-              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="buyer-awareness">WHAT IT IS NOT</button>
+              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="buyer-awareness">BUYER AWARENESS</button>
             </li>
             <li class="collection-tabs__item">
-              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="care-guide">OUR PROMISE</button>
+              <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="care-guide">CARE GUIDE</button>
             </li>
             <li class="collection-tabs__item">
               <button class="collection-tabs__btn" role="tab" aria-selected="false" data-tab="faq">FAQ</button>

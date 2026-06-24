@@ -3523,36 +3523,43 @@
     var prefix = METAL_GENDER_PREFIX[metal + '|' + gender];
     if (!prefix) { onDone([]); return; }
 
-    var MAX = 80;
-    // Step 1: probe front view of designs 1-MAX in parallel to find which exist
-    var frontProbes = [];
-    for (var i = 1; i <= MAX; i++) {
-      frontProbes.push((function(id) {
-        var code = prefix + String(id).padStart(2, '0');
-        return _probeView(base, metal, gender, gem, code, 'F').then(function(fFile) {
-          return fFile ? { id: String(id), code: code, fFile: fFile } : null;
-        });
-      })(i));
+    // Probe each design's three views (F/T/B). A design counts as present if
+    // ANY view exists, so the admin can upload partial views (e.g. back only)
+    // and it still shows. Designs are numbered contiguously from 01, so we
+    // probe in batches and stop at the first empty batch — keeps requests low.
+    var BATCH = 8, MAX = 120, found = [];
+    function probeDesign(id) {
+      var code = prefix + String(id).padStart(2, '0');
+      return Promise.all([
+        _probeView(base, metal, gender, gem, code, 'F'),
+        _probeView(base, metal, gender, gem, code, 'T'),
+        _probeView(base, metal, gender, gem, code, 'B'),
+      ]).then(function(views) {
+        var files = views.filter(Boolean);   // keeps F, T, B order
+        return files.length ? { id: String(id), files: files } : null;
+      });
     }
-
-    Promise.all(frontProbes).then(function(hits) {
-      hits = hits.filter(Boolean);
-      // Step 2: for each found design, probe T and B views in parallel
-      return Promise.all(hits.map(function(h) {
-        return Promise.all([
-          _probeView(base, metal, gender, gem, h.code, 'T'),
-          _probeView(base, metal, gender, gem, h.code, 'B'),
-        ]).then(function(rest) {
-          var files = [h.fFile];
-          rest.forEach(function(f) { if (f) files.push(f); });
-          return { id: h.id, files: files };
-        });
-      }));
-    }).then(function(designs) {
-      _rcCache[key] = designs;
-      try { sessionStorage.setItem(key, JSON.stringify(designs)); } catch(e) {}
-      onDone(designs);
-    });
+    function nextBatch(start) {
+      var probes = [];
+      for (var i = start; i < start + BATCH && i <= MAX; i++) probes.push(probeDesign(i));
+      Promise.all(probes).then(function(hits) {
+        hits = hits.filter(Boolean);
+        found = found.concat(hits);
+        if (hits.length > 0 && start + BATCH <= MAX) {
+          nextBatch(start + BATCH);
+        } else {
+          found.sort(function(a, b) { return parseInt(a.id) - parseInt(b.id); });
+          // Only cache non-empty results, so newly-uploaded designs appear on
+          // the next navigation instead of being masked by a cached "empty".
+          if (found.length) {
+            _rcCache[key] = found;
+            try { sessionStorage.setItem(key, JSON.stringify(found)); } catch(e) {}
+          }
+          onDone(found);
+        }
+      });
+    }
+    nextBatch(1);
   }
 
   // ── Pendant design discovery: dynamic CDN probing ─────────────────
@@ -3610,8 +3617,10 @@
         } else {
           found.sort(function(a, b) { return a.id - b.id; });
           var files = found.map(function(h) { return h.file; });
-          _rcCache[key] = files;
-          try { sessionStorage.setItem(key, JSON.stringify(files)); } catch(e) {}
+          if (files.length) {
+            _rcCache[key] = files;
+            try { sessionStorage.setItem(key, JSON.stringify(files)); } catch(e) {}
+          }
           onDone(files);
         }
       });
@@ -3644,7 +3653,13 @@
       certFee: 0,
       metalFee: 0,
       metalFlat: 0,
-      styleFee: 0
+      styleFee: 0,
+      // Snapshot of the fees that were locked in at "Confirm" time. The page
+      // price is computed ONLY from these (plus the page-level certFee), so
+      // selecting options in the modal never moves the price until confirmed.
+      confMetalFee: 0,
+      confMetalFlat: 0,
+      confStyleFee: 0
     },
 
     getAssetBase: function() {
@@ -4037,7 +4052,8 @@
       // Refresh design images when metal changes
       if (cat === 'metal') this.renderDesigns();
 
-      this.updateTotalPrice();
+      // Note: page price is intentionally NOT updated here — it only changes
+      // when the user clicks "Confirm Customization" (see confirm()).
     },
 
     setRingSize: function(val) {
@@ -4065,14 +4081,18 @@
       this.state[cat] = 'None';
       if (cat === 'metal') { this.state.metalFee = 0; this.state.metalFlat = 0; }
       if (cat === 'style') this.state.styleFee = 0;
-      this.updateTotalPrice();
+      // Page price only changes on confirm; nothing to update here.
     },
 
     updateTotalPrice: function() {
       if (this.basePrice > 100000000) return;
-      const totalPaise = this.state.metalFlat > 0
-        ? this.state.metalFlat + this.state.certFee + this.state.styleFee
-        : this.basePrice + this.state.certFee + this.state.metalFee + this.state.styleFee;
+      // Price uses ONLY the confirmed-fee snapshot (confMetal*/confStyleFee),
+      // never the live in-modal selection, so toggling options does not move
+      // the page price until "Confirm" copies them in. certFee is a page-level
+      // control and always applies immediately.
+      const totalPaise = this.state.confMetalFlat > 0
+        ? this.state.confMetalFlat + this.state.certFee + this.state.confStyleFee
+        : this.basePrice + this.state.certFee + this.state.confMetalFee + this.state.confStyleFee;
       const formattedPrice = (totalPaise / 100).toLocaleString('en-IN', {
         style: 'currency',
         currency: 'INR',
@@ -4123,6 +4143,11 @@
       document.getElementById('cta-customize').style.display = 'flex';
 
       this.state.customized = true;
+      // Lock in the selected fees, then reflect them in the page price.
+      this.state.confMetalFee  = this.state.metalFee;
+      this.state.confMetalFlat = this.state.metalFlat;
+      this.state.confStyleFee  = this.state.styleFee;
+      this.updateTotalPrice();
       updateDispatchDate();
 
       this.close();
@@ -4150,6 +4175,9 @@
       this.state.metalFee = 0;
       this.state.metalFlat = 0;
       this.state.styleFee = 0;
+      this.state.confMetalFee = 0;
+      this.state.confMetalFlat = 0;
+      this.state.confStyleFee = 0;
 
       // Reset type card UI
       document.querySelectorAll('.customize-modal [data-opt="type"]').forEach(function(b) {

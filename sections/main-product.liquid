@@ -3486,7 +3486,7 @@
   };
   // white-gold filenames are inconsistent across old uploads; try all variants
   const WHITE_GOLD_VARIANTS = ['white-gold', 'whitegold', 'white_gold'];
-  const RING_EXTS = ['webp', 'jpeg', 'jpg'];
+  const RING_EXTS = ['webp', 'jpeg', 'jpg', 'png'];
   var _rcCache = {};
 
   function _headOk(url) {
@@ -3523,19 +3523,24 @@
     var prefix = METAL_GENDER_PREFIX[metal + '|' + gender];
     if (!prefix) { onDone([]); return; }
 
-    // Probe each design's three views (F/T/B). A design counts as present if
-    // ANY view exists, so the admin can upload partial views (e.g. back only)
-    // and it still shows. Designs are numbered contiguously from 01, so we
-    // probe in batches and stop at the first empty batch — keeps requests low.
+    // Probe each design's views. A design counts as present if ANY view
+    // exists, so the admin can upload partial views (e.g. back only) and it
+    // still shows. We accept BOTH design-code styles so files can be named
+    // either way:  {PREFIX}{nn}  (e.g. COFL01)  or  D{n}  (e.g. D1).
+    // Views tried, in display order: F (front), T (top), B (back), L (left).
+    // Designs are numbered contiguously from 1, so we probe in batches and
+    // stop at the first empty batch to keep request counts low.
+    var RING_VIEWS = ['F', 'T', 'B', 'L'];
     var BATCH = 8, MAX = 120, found = [];
     function probeDesign(id) {
-      var code = prefix + String(id).padStart(2, '0');
-      return Promise.all([
-        _probeView(base, metal, gender, gem, code, 'F'),
-        _probeView(base, metal, gender, gem, code, 'T'),
-        _probeView(base, metal, gender, gem, code, 'B'),
-      ]).then(function(views) {
-        var files = views.filter(Boolean);   // keeps F, T, B order
+      var codes = [prefix + String(id).padStart(2, '0'), 'D' + id, String(id)];
+      // For each view, take the first file that exists across both code styles.
+      return Promise.all(RING_VIEWS.map(function(view) {
+        return Promise.all(codes.map(function(code) {
+          return _probeView(base, metal, gender, gem, code, view);
+        })).then(function(hits) { return hits.find(Boolean) || null; });
+      })).then(function(views) {
+        var files = views.filter(Boolean);   // keeps F, T, B, L order
         return files.length ? { id: String(id), files: files } : null;
       });
     }
@@ -3571,12 +3576,17 @@
     copper:     'CO', gold:        'GL', silver:     'SL',
     platinum:   'PL', 'white-gold': 'WG', panchdhatu: 'PN',
   };
-  const PENDANT_EXTS = ['webp', 'jpeg', 'jpg'];
+  const PENDANT_EXTS = ['webp', 'jpeg', 'jpg', 'png'];
 
-  // Probe one design id, trying all ext variants in parallel.
-  function _probePendant(base, metal, gem, code) {
-    var candidates = PENDANT_EXTS.map(function(ext) {
-      return 'pendant_' + metal + '_' + gem + '_' + code + '.' + ext;
+  // Probe one design id. Accepts every code style — {PREFIX}{nn} (CO01),
+  // D{n} (D1) or a bare number (1) — and every ext, all in parallel.
+  function _probePendant(base, metal, gem, prefix, id) {
+    var codes = [prefix + String(id).padStart(2, '0'), 'D' + id, String(id)];
+    var candidates = [];
+    codes.forEach(function(code) {
+      PENDANT_EXTS.forEach(function(ext) {
+        candidates.push('pendant_' + metal + '_' + gem + '_' + code + '.' + ext);
+      });
     });
     return Promise.all(candidates.map(function(fname) {
       return _headOk(base + fname).then(function(ok) { return ok ? fname : null; });
@@ -3603,8 +3613,7 @@
       var probes = [];
       for (var i = start; i < start + BATCH && i <= MAX; i++) {
         probes.push((function(id) {
-          var code = prefix + String(id).padStart(2, '0');
-          return _probePendant(base, metal, gem, code).then(function(f) {
+          return _probePendant(base, metal, gem, prefix, id).then(function(f) {
             return f ? { id: id, file: f } : null;
           });
         })(i));

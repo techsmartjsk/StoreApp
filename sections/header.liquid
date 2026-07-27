@@ -111,35 +111,23 @@
           {%- assign has_dropdown = block.settings.has_dropdown -%}
           {%- assign nav_label = block.settings.label -%}
 
-          {%- comment -%} Check schema dropdown items {%- endcomment -%}
-          {%- assign schema_items_count = 0 -%}
+          {%- comment -%} Count this nav's dropdown items once and reuse (was two identical scans). {%- endcomment -%}
+          {%- assign item_count = 0 -%}
           {%- for item_block in section.blocks -%}
-            {%- if item_block.type == 'dropdown_item' -%}
-              {%- assign parent_label = item_block.settings.parent_label | strip -%}
-              {%- if parent_label == nav_label -%}
-                {%- assign schema_items_count = schema_items_count | plus: 1 -%}
-              {%- endif -%}
+            {%- if item_block.type == 'dropdown_item' and item_block.settings.parent_label == nav_label -%}
+              {%- assign item_count = item_count | plus: 1 -%}
             {%- endif -%}
           {%- endfor -%}
 
-          {% if has_dropdown or schema_items_count > 0 %}
+          {% if has_dropdown or item_count > 0 %}
             <div class="nav-item nav-item--has-dropdown" {{ block.shopify_attributes }}>
               <a href="{{ nav_url }}" class="nav-bar__link">
                 {{ nav_label }}
                 {% render 'icon', name: 'chevron-down', class: 'nav-bar__chevron' %}
               </a>
 
-              {%- assign item_count = 0 -%}
-              {%- for item_block in section.blocks -%}
-                {%- if item_block.type == 'dropdown_item' -%}
-                  {%- if item_block.settings.parent_label == nav_label -%}
-                    {%- assign item_count = item_count | plus: 1 -%}
-                  {%- endif -%}
-                {%- endif -%}
-              {%- endfor -%}
-
               <div
-                class="mega-menu {% if item_count > 5 %}mega-menu--multi{% endif %}"
+                class="mega-menu {% if item_count > 6 %}mega-menu--multi{% endif %}"
                 role="region"
                 aria-label="{{ nav_label }} submenu"
               >
@@ -150,30 +138,61 @@
                 {%- if block.settings.gem_type_source != blank -%}
                   {%- comment -%} Auto-built dropdown: distinct gem types from a collection {%- endcomment -%}
                   {%- assign _gts_src = block.settings.gem_type_source -%}
+                  {%- comment -%} Gem types to exclude from the auto-built dropdown (comma-separated, handleized match) {%- endcomment -%}
+                  {%- assign _gt_excl = '' -%}
+                  {%- if block.settings.gem_type_exclude != blank -%}
+                    {%- assign _gt_excl_raw = block.settings.gem_type_exclude | split: ',' -%}
+                    {%- for _ex in _gt_excl_raw -%}
+                      {%- assign _ex_h = _ex | handleize -%}
+                      {%- assign _gt_excl = _gt_excl | append: _ex_h | append: '||' -%}
+                    {%- endfor -%}
+                  {%- endif -%}
                   {%- assign _gt_list = '' -%}
                   {%- for product in collections[_gts_src].products -%}
                     {%- assign _gt = product.metafields.custom.gem_type | default: '' | strip -%}
                     {%- if _gt != blank -%}
+                      {%- assign _gt_ex_tok = _gt | handleize | append: '||' -%}
+                      {%- if _gt_excl contains _gt_ex_tok -%}{%- continue -%}{%- endif -%}
                       {%- assign _gt_tok = _gt | append: '||' -%}
                       {%- unless _gt_list contains _gt_tok -%}
                         {%- assign _gt_list = _gt_list | append: _gt_tok -%}
                       {%- endunless -%}
                     {%- endif -%}
                   {%- endfor -%}
+                  {%- comment -%} Manually include extra gem types even if not tagged in the source collection (comma-separated) {%- endcomment -%}
+                  {%- if block.settings.gem_type_include != blank -%}
+                    {%- assign _gt_inc_raw = block.settings.gem_type_include | split: ',' -%}
+                    {%- for _inc in _gt_inc_raw -%}
+                      {%- assign _inc_t = _inc | strip -%}
+                      {%- if _inc_t == blank -%}{%- continue -%}{%- endif -%}
+                      {%- assign _inc_ex_tok = _inc_t | handleize | append: '||' -%}
+                      {%- if _gt_excl contains _inc_ex_tok -%}{%- continue -%}{%- endif -%}
+                      {%- assign _inc_tok = _inc_t | append: '||' -%}
+                      {%- unless _gt_list contains _inc_tok -%}
+                        {%- assign _gt_list = _gt_list | append: _inc_tok -%}
+                      {%- endunless -%}
+                    {%- endfor -%}
+                  {%- endif -%}
                   {%- assign _gem_types = _gt_list | split: '||' -%}
                   <ul class="mega-menu__list">
                     {%- for gt in _gem_types -%}
                       {%- if gt == blank -%}{%- continue -%}{%- endif -%}
                       {%- assign _gt_handle = gt | handleize -%}
                       {%- assign _gt_coll = collections[_gt_handle] -%}
-                      {%- assign _gt_enc = gt | url_encode -%}
-                      {%- assign _gt_url = '/collections/' | append: _gts_src | append: '?filter.p.m.custom.gem_type=' | append: _gt_enc -%}
+                      {%- comment -%} Link to the gem's own collection (e.g. /collections/amethyst); fall back to the filtered source collection if it doesn't exist {%- endcomment -%}
+                      {%- if _gt_coll != empty and _gt_coll.id -%}
+                        {%- assign _gt_url = '/collections/' | append: _gt_handle -%}
+                      {%- else -%}
+                        {%- assign _gt_enc = gt | url_encode -%}
+                        {%- assign _gt_url = '/collections/' | append: _gts_src | append: '?filter.p.m.custom.gem_type=' | append: _gt_enc -%}
+                      {%- endif -%}
                       <li class="mega-menu__item-wrapper">
                         {%- comment -%} Use the gem's dropdown-item asset image (same as Upratnas), not the collection image {%- endcomment -%}
                         {%- assign _gt_asset = '' -%}
                         {%- for _ib in section.blocks -%}
                           {%- if _ib.type == 'dropdown_item' and _ib.settings.asset_name != blank -%}
-                            {%- assign _ib_handle = _ib.settings.label | handle -%}
+                            {%- comment -%} Match on the base gem name, ignoring any "(Hindi)" suffix, e.g. "Amethyst (Jamunia)" -> "amethyst" {%- endcomment -%}
+                            {%- assign _ib_handle = _ib.settings.label | split: '(' | first | strip | handle -%}
                             {%- if _ib_handle == _gt_handle -%}
                               {%- assign _gt_asset = _ib.settings.asset_name -%}
                               {%- break -%}
@@ -258,35 +277,6 @@
                   </div>
                 {%- else -%}
                 <ul class="mega-menu__list">
-                  {%- if nav_label == 'SANCTUM' -%}
-                    {%- for product in collections.sanctum.products limit: 11 -%}
-                      <li class="mega-menu__item-wrapper">
-                        <a href="{{ product.url }}" class="mega-menu__item">
-                          <div class="mega-menu__icon">
-                            <img
-                              src="{{ product.featured_image | image_url: width: 80 }}"
-                              alt="{{ product.title }}"
-                              loading="lazy"
-                            >
-                          </div>
-                          <span class="mega-menu__label">{{ product.title }}</span>
-                        </a>
-                      </li>
-                    {%- endfor -%}
-                    <li class="mega-menu__item-wrapper">
-                      <a href="/collections/sanctum" class="mega-menu__item mega-menu__item--view-all">
-                        <div
-                          class="mega-menu__icon"
-                          style="background: #f9f9f9; display: flex; align-items: center; justify-content: center; font-size: 18px;"
-                        >
-                          →
-                        </div>
-                        <span class="mega-menu__label" style="font-weight: 700; color: var(--color-gold);"
-                          >View All Sanctum Gems</span
-                        >
-                      </a>
-                    </li>
-                  {%- else -%}
                     {%- for item_block in section.blocks -%}
                       {%- if item_block.type == 'dropdown_item' -%}
                         {%- assign parent_label = item_block.settings.parent_label | strip -%}
@@ -336,7 +326,6 @@
                         </span>
                       </a>
                     </li>
-                  {%- endif -%}
                 </ul>
                 {%- endif -%}
                 {%- endif -%}
@@ -458,6 +447,18 @@
           "id": "gem_type_source",
           "label": "Auto-build dropdown from collection (gem types)",
           "info": "Collection handle, e.g. crush-worthy-delights. When set, the dropdown lists the distinct gem types found in that collection."
+        },
+        {
+          "type": "text",
+          "id": "gem_type_exclude",
+          "label": "Exclude gem types",
+          "info": "Comma-separated gem type names to hide from the auto-built dropdown, e.g. Chalcedony."
+        },
+        {
+          "type": "text",
+          "id": "gem_type_include",
+          "label": "Include extra gem types",
+          "info": "Comma-separated gem types to add even if not tagged in the collection, e.g. Citrine, Blue Topaz. Each links to its own collection."
         }
       ]
     },
